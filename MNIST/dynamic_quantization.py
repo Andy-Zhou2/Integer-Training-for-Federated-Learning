@@ -19,7 +19,6 @@ class Net(nn.Module):
         self.fc2 = nn.Linear(128, 10)
 
     def forward(self, x):
-        print(x, x.max(), x.min())
         x = self.conv1(x)
         x = F.relu(x)
         x = self.conv2(x)
@@ -80,26 +79,10 @@ def main():
     parser.add_argument('--save-model', action='store_true', default=True,
                         help='For Saving the current Model')
     args = parser.parse_args()
-    use_cuda = not args.no_cuda and torch.cuda.is_available()
-    use_mps = not args.no_mps and torch.backends.mps.is_available()
 
     torch.manual_seed(args.seed)
 
-    if use_cuda:
-        device = torch.device("cuda")
-    elif use_mps:
-        device = torch.device("mps")
-    else:
-        device = torch.device("cpu")
-
-    train_kwargs = {'batch_size': args.batch_size}
     test_kwargs = {'batch_size': args.test_batch_size}
-    if use_cuda:
-        cuda_kwargs = {'num_workers': 1,
-                       'pin_memory': True,
-                       'shuffle': True}
-        train_kwargs.update(cuda_kwargs)
-        test_kwargs.update(cuda_kwargs)
 
     transform=transforms.Compose([
         transforms.ToTensor(),
@@ -110,10 +93,16 @@ def main():
                        transform=transform)
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
 
-    model = Net().to(device)
-    model.load_state_dict(torch.load("mnist_cnn.pt"))
+    model = Net()
+    model.load_state_dict(torch.load("./MNIST/model_ckpt/mnist_cnn.pt"))
 
-    test(model, device, test_loader)
+    model_int8 = torch.ao.quantization.quantize_dynamic(
+        model,  # the original model
+        {'conv1'},  # a set of layers to dynamically quantize
+        dtype=torch.qint8)  # the target dtype for quantized weights
+    print(model_int8)
+
+    test(model_int8, 'cpu', test_loader)
 
 
 
