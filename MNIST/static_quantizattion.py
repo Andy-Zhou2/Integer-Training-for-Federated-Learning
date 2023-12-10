@@ -6,6 +6,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
+from torch.quantization import quantize_fx
 
 
 class Net(nn.Module):
@@ -21,6 +22,7 @@ class Net(nn.Module):
     def forward(self, x):
         x = self.conv1(x)
         x = F.relu(x)
+        print(f'conv1: {x.shape}')
         x = self.conv2(x)
         x = F.relu(x)
         x = F.max_pool2d(x, 2)
@@ -88,21 +90,68 @@ def main():
         transforms.ToTensor(),
         transforms.Normalize((0.1307,), (0.3081,))
         ])
-
+    dataset = datasets.MNIST('../data', train=True,
+                              transform=transform, download=True)
     dataset2 = datasets.MNIST('../data', train=False,
                        transform=transform, download=True)
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
 
     model = Net()
-    model.load_state_dict(torch.load("./MNIST/model_ckpt/mnist_cnn.pt"))
+    model.load_state_dict(torch.load("./model_ckpt/mnist_cnn.pt"))
 
-    model_int8 = torch.ao.quantization.quantize_dynamic(
-        model,  # the original model
-        {'conv1'},  # a set of layers to dynamically quantize
-        dtype=torch.qint8)  # the target dtype for quantized weights
-    print(model_int8)
+    # model_int8 = torch.ao.quantization.quantize_dynamic(
+    #     model,  # the original model
+    #     {'conv1'},  # a set of layers to dynamically quantize
+    #     dtype=torch.qint8)  # the target dtype for quantized weights
+    # print(model_int8)
 
-    test(model_int8, 'cpu', test_loader)
+    model.eval()
+
+    backend = 'x86'
+    qconfig_dict = {"": torch.quantization.get_default_qconfig(backend)}
+    # Prepare
+    example_inputs = [sample[0] for sample in dataset][:1000]
+
+    model_prepared = quantize_fx.prepare_fx(model, qconfig_dict, example_inputs)
+    print(model_prepared)
+
+    # quantize
+    model_quantized = quantize_fx.convert_fx(model_prepared)
+    print(model_quantized)
+
+    def fw(x):
+        self = model_quantized
+        conv1_input_scale_0 = self.conv1_input_scale_0
+        conv1_input_zero_point_0 = self.conv1_input_zero_point_0
+        quantize_per_tensor = torch.quantize_per_tensor(x, conv1_input_scale_0, conv1_input_zero_point_0,
+                                                        torch.quint8);
+        x = conv1_input_scale_0 = conv1_input_zero_point_0 = None
+        conv1 = self.conv1(quantize_per_tensor);
+        print(f'conv1: {conv1.dtype}')
+        quantize_per_tensor = None
+        conv2 = self.conv2(conv1);
+        conv1 = None
+        max_pool2d = torch.nn.functional.max_pool2d(conv2, 2, stride=None, padding=0, dilation=1, ceil_mode=False,
+                                                    return_indices=False);
+        conv2 = None
+        dropout1 = self.dropout1(max_pool2d);
+        max_pool2d = None
+        flatten = torch.flatten(dropout1, 1);
+        dropout1 = None
+        fc1 = self.fc1(flatten);
+        flatten = None
+        dropout2 = self.dropout2(fc1);
+        fc1 = None
+        fc2 = self.fc2(dropout2);
+        dropout2 = None
+        dequantize_8 = fc2.dequantize();
+        fc2 = None
+        log_softmax = torch.nn.functional.log_softmax(dequantize_8, dim=1, _stacklevel=3, dtype=None);
+        dequantize_8 = None
+        return log_softmax
+    model_quantized.forward = fw
+
+    test(model_quantized, 'cpu', test_loader)
 
 
 
