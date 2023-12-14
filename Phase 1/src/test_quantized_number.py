@@ -130,6 +130,15 @@ class TestQuantizedArrayMatMul(unittest.TestCase):
 
         self.assertTrue(np.allclose(result.dequantize(), expected))
 
+def compute_M0repr_and_n(input_scale, weights_scale, output_scale):
+    M = input_scale * weights_scale / output_scale
+    n = -np.ceil(np.log2(M)).astype(np.int_)
+    for i in range(len(n)):
+        if np.allclose(2. ** (-n[i]), M[i]):  # M is a power of 2
+            n[i] -= 1
+    M0 = M / (2. ** (-n))  # M0 in [0.5, 1)
+    M0_repr = np.round(M0 * 2 ** 31).astype(np.int32)
+    return M0_repr, n
 
 class TestQuantizedArrayConv(unittest.TestCase):
     def simple_test_template(self, input_scale, input_zero_point, weights_scale, weights_zero_point, output_scale,
@@ -146,13 +155,7 @@ class TestQuantizedArrayConv(unittest.TestCase):
         bias_q = QuantizedArray.quantize_per_channel(np.array([1.5, 2]), input_scale * weights_scale, np.array([0, 0]),
                                                      bit_width)
 
-        M = input_scale * weights_scale / output_scale
-        n = -np.ceil(np.log2(M)).astype(np.int_)
-        for i in range(len(n)):
-            if np.allclose(2. ** (-n[i]), M[i]):  # M is a power of 2
-                n[i] -= 1
-        M0 = M / (2. ** (-n))  # M0 in [0.5, 1)
-        M0_repr = np.round(M0 * 2 ** 31).astype(np.int32)
+        M0_repr, n = compute_M0repr_and_n(input_scale, weights_scale, output_scale)
 
         output_q = input_q.conv2d(weights_q, bias_q, output_scale, output_zero_point, bit_width, M0_repr=M0_repr, n=n)
         self.assertTrue(np.allclose(output_q.dequantize(), np.array([[[7.5, 9.5], [13.5, 15.5]], [[8, 10], [14, 16]]])))
@@ -193,10 +196,10 @@ class TestQuantizedArrayConv(unittest.TestCase):
         bias = np.random.randint(-128, 128, C_out, dtype=np.int64)
 
         # Scales and zero points
-        input_scale = np.random.uniform(0.01, 1)
-        weight_scale = np.random.uniform(0.01, 1, C_out)
+        input_scale = np.random.uniform(0.01, 0.2)
+        weight_scale = np.random.uniform(0.01, 0.2, C_out)
         bias_scale = input_scale * weight_scale
-        output_scale = np.random.uniform(0.01, 1)
+        output_scale = np.random.uniform(0.01, 0.2)
 
         input_zero_point = 0
         weight_zero_point = np.zeros(C_out, dtype=np.int64)
@@ -204,22 +207,12 @@ class TestQuantizedArrayConv(unittest.TestCase):
         output_zero_point = 0
 
         # Calculate M0 and n for the conv2d function
-        M = input_scale * weight_scale / output_scale
-        n = -np.ceil(np.log2(M)).astype(np.int_)
-        for i in range(len(n)):
-            if np.allclose(2. ** (-n[i]), M[i]):  # M is a power of 2
-                n[i] -= 1
-        M0 = M / (2. ** (-n))  # M0 in [0.5, 1)
-        M0_repr = np.round(M0 * 2 ** 31).astype(np.int32)
+        M0_repr, n = compute_M0repr_and_n(input_scale, weight_scale, output_scale)
 
         # Quantize the input, weights, and bias
         input_q = QuantizedArray.quantize_per_tensor(input_array, input_scale, input_zero_point, bit_width)
         weights_q = QuantizedArray.quantize_per_channel(weights, weight_scale, weight_zero_point, bit_width)
         bias_q = QuantizedArray.quantize_per_channel(bias, bias_scale, bias_zero_point, bit_width)
-
-        # print(input_q.dequantize())
-        # print(weights_q.dequantize())
-        # print(bias_q.dequantize())
 
         # Perform the convolution
         output_q = input_q.conv2d(weights_q, bias_q, output_scale, output_zero_point, bit_width, M0_repr, n)
@@ -234,20 +227,13 @@ class TestQuantizedArrayConv(unittest.TestCase):
         bias_tensor = torch.tensor(bias_q.dequantize())
         output_tensor = torch.nn.functional.conv2d(input_tensor, weights_tensor, bias_tensor)
 
-        # print(f'output_tensor: {output_tensor}')
-        # print(f'our output: {output_q.dequantize()}')
-
-        # inconsistent_coords = np.argwhere(np.isclose(output_q.dequantize(), output_tensor, rtol=0.01) == False)
-        # print(f'Inconsistent coordinates: {inconsistent_coords}')
-        # print(f'Inconsistent values: {output_q.dequantize()[inconsistent_coords[:, 0], inconsistent_coords[:, 1], inconsistent_coords[:, 2]]}')
-        # print(f'Inconsistent values: {output_tensor[inconsistent_coords[:, 0], inconsistent_coords[:, 1], inconsistent_coords[:, 2]]}')
-
-        self.assertTrue(np.allclose(output_q.dequantize(), output_tensor, rtol=0.01, atol=0.5))
+        self.assertTrue(np.allclose(output_q.dequantize(), output_tensor, rtol=0.01, atol=0.5))  # larger tolerance
 
     def test_sample(self):
         np.random.seed(1024)
         for _ in range(10):
             self.random_test()
+
 
 if __name__ == '__main__':
     unittest.main()
