@@ -13,6 +13,10 @@ def quantize_and_clip(array, scale, zero_point, bit_width):
 
 class QuantizedArray:
     def __init__(self, array, scale, zero_point, bit_width, per_channel=False):
+        # check if array is consistent with bit_width
+        assert np.all(array <= 2 ** (bit_width - 1) - 1) and np.all(array >= -2 ** (bit_width - 1)), \
+            'array is not consistent with bit_width'
+
         self.array = np.array(array, dtype=np.int64)
         self.scale = np.array(scale, dtype=np.float64)
         self.zero_point = np.array(zero_point, dtype=np.int64)
@@ -47,7 +51,11 @@ class QuantizedArray:
         return cls(result, scale, zero_point, bit_width, per_channel=True)
 
     def dequantize(self):  # returns float64
-        return (self.array - self.zero_point) * self.scale
+        if not self.per_channel:  # per tensor
+            return (self.array - self.zero_point) * self.scale
+        else:  # per channel
+            broadcast_shape = [self.scale.size] + [1] * (self.array.ndim - 1)
+            return (self.array - self.zero_point.reshape(broadcast_shape)) * self.scale.reshape(broadcast_shape)
 
     def add(self, other, scale, zero_point, bit_width):
         assert isinstance(other, QuantizedArray), 'Can only add QuantizedArrays'
@@ -56,7 +64,7 @@ class QuantizedArray:
         r = self.dequantize() + other.dequantize()
         return QuantizedArray.quantize_per_tensor(r, scale, zero_point, bit_width)
 
-    def matmul(self, other, scale, zero_point, result_bit_width, intermediate_bit_width=32):
+    def matmul(self, other: 'QuantizedArray', scale, zero_point, result_bit_width, intermediate_bit_width=32):
         assert isinstance(other, QuantizedArray), 'Can only add QuantizedArrays'
         assert self.array.ndim == 2 and other.array.ndim == 2, 'Arrays must be 2D'
         assert self.shape[1] == other.shape[0], 'Arrays must be of appropriate shape'
@@ -75,3 +83,61 @@ class QuantizedArray:
                 q = np.round(q * m + zero_point)
                 result[i, j] = q
         return QuantizedArray(result, scale, zero_point, result_bit_width)
+
+    def conv2d(self, weight: 'QuantizedArray', bias: 'QuantizedArray', scale, zero_point, bit_width,
+               M0_repr: np.ndarray[np.int32], n: np.ndarray[np.int_]):
+        # input: (C_in, H, W)
+        # weight: (C_out, C_in, kH, kW)
+        # bias: (C_out)
+        # scale, zero_point, bit_width: those of the output
+        # bias should have scale of S1 * S2 and zero_point 0
+        # Normalize M := S1 * S2 / S3 = 2^(-n) * M0, where 0.5 <= M0 < 1
+        # M0_repr: M0 * 2^31
+        assert not self.per_channel, 'Per-channel quantization not supported for input'
+        assert weight.per_channel, 'Per-channel quantization required for weight'
+        assert bias.per_channel, 'Per-channel quantization required for bias'
+        assert np.all(bias.zero_point == 0), 'Bias must be zero-pointed at 0'
+        assert np.allclose(bias.scale, self.scale * weight.scale), \
+            'Bias scale must be equal to input scale * weight scale'
+
+        C_in, H, W = self.shape
+        C_out, _, kH, kW = weight.shape
+
+        # output
+        outH = H - (kH - 1)
+        outW = W - (kW - 1)
+        output = np.empty((C_out, outH, outW), dtype=np.int64)
+
+        for c_out in range(C_out):
+            for h in range(outH):
+                for w in range(outW):
+                    # Convolution
+                    q = np.zeros([1], dtype=np.int32)
+                    for c_in in range(C_in):
+                        for kh in range(kH):
+                            for kw in range(kW):
+                                q += (weight.array[c_out, c_in, kh, kw] - weight.zero_point[c_out]) * \
+                                     (self.array[c_in, h + kh, w + kw] - self.zero_point)
+
+                    # Add bias
+                    q += bias.array[c_out]
+
+                    # multiply by M
+                    q = np.multiply(q, M0_repr[c_out], dtype=np.int64)
+                    # right shift and round by n bits
+                    bits_to_shift = n[c_out] + 31
+
+                    q += np.bitwise_and(q, np.left_shift(1, bits_to_shift - 1, dtype=np.int64))  # to round
+                    # works for negative and positive numbers
+                    # for negative numbers, -1.5 -> -1, -2.5 -> -2
+
+                    q = np.right_shift(q, bits_to_shift)
+                    q += zero_point
+                    q = np.clip(q, -2 ** (bit_width - 1), 2 ** (bit_width - 1) - 1)
+
+                    output[c_out, h, w] = q
+
+        # quantize
+        output = QuantizedArray(output, scale, zero_point, bit_width)
+
+        return output
