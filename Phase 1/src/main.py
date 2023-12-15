@@ -28,11 +28,8 @@ def get_q_params_from_range(min_value: float, max_value: float, bit_width: int):
     if max_value < 0:
         max_value = 0
 
-    if set_zero_point_to_zero:
-        unsigned_zero_point = 2 ** (bit_width - 1)
-    else:
-        scale = (max_value - min_value) / (2 ** bit_width - 1)
-        unsigned_zero_point = np.round(-min_value / scale).astype(np.int_)
+    scale = (max_value - min_value) / (2 ** bit_width - 1)
+    unsigned_zero_point = np.round(-min_value / scale).astype(np.int_)
 
     if unsigned_zero_point == 0:
         scale = max_value / (2 ** bit_width - 1)

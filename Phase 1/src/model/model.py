@@ -19,7 +19,9 @@ class MNIST_Net(nn.Module):
 
     def forward(self, x):
         x = self.conv1(x)
+        print('x before relu1: ', x)
         x = self.relu1(x)
+        print('x after relu1: ', x)
         x = self.conv2(x)
         x = self.relu2(x)
         x = self.max_pool(x)
@@ -31,3 +33,19 @@ class MNIST_Net(nn.Module):
         x = self.fc2(x)
         output = self.log_softmax(x)
         return output
+
+if __name__ == '__main__':
+    net = MNIST_Net()
+    net.load_state_dict(torch.load("../data/model_ckpt/mnist_cnn.pt"))
+    net.eval()
+
+    from torchvision import datasets, transforms
+
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.1307,), (0.3081,))
+    ])
+    dataset_train = datasets.MNIST('../data', train=True,
+                                   transform=transform, download=True)
+
+    net(dataset_train[0][0])
