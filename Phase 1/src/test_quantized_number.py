@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from quantize.quantized_number import QuantizedArray
+from quantize.quantized_number import QuantizedArray, compute_M0repr_and_n
 import torch
 
 
@@ -130,15 +130,6 @@ class TestQuantizedArrayMatMul(unittest.TestCase):
 
         self.assertTrue(np.allclose(result.dequantize(), expected))
 
-def compute_M0repr_and_n(input_scale, weights_scale, output_scale):
-    M = input_scale * weights_scale / output_scale
-    n = -np.ceil(np.log2(M)).astype(np.int_)
-    for i in range(len(n)):
-        if np.allclose(2. ** (-n[i]), M[i]):  # M is a power of 2
-            n[i] -= 1
-    M0 = M / (2. ** (-n))  # M0 in [0.5, 1)
-    M0_repr = np.round(M0 * 2 ** 31).astype(np.int32)
-    return M0_repr, n
 
 class TestQuantizedArrayConv(unittest.TestCase):
     def simple_test_template(self, input_scale, input_zero_point, weights_scale, weights_zero_point, output_scale,

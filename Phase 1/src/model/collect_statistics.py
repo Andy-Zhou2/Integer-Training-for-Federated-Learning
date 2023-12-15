@@ -1,4 +1,3 @@
-from __future__ import print_function
 import argparse
 import torch
 import torch.nn as nn
@@ -19,16 +18,16 @@ def main():
                              transform=transform, download=True)
 
     model = MNIST_Net()
-    model.load_state_dict(torch.load("./model_ckpt/mnist_cnn.pt"))
+    model.load_state_dict(torch.load("../data/model_ckpt/mnist_cnn.pt"))
 
     model.eval()
 
     """Fuse
     - Inplace fusion replaces the first module in the sequence with the fused module, and the rest with identity modules
     """
-    # torch.quantization.fuse_modules(model, ['conv1', 'relu1'], inplace=True)  # fuse first Conv-ReLU pair
-    # torch.quantization.fuse_modules(model, ['conv2', 'relu2'], inplace=True)  # fuse second Conv-ReLU pair
-    # torch.quantization.fuse_modules(model, ['fc1', 'relu3'], inplace=True)
+    torch.quantization.fuse_modules(model, ['conv1', 'relu1'], inplace=True)  # fuse first Conv-ReLU pair
+    torch.quantization.fuse_modules(model, ['conv2', 'relu2'], inplace=True)  # fuse second Conv-ReLU pair
+    torch.quantization.fuse_modules(model, ['fc1', 'relu3'], inplace=True)
 
     """Insert stubs"""
     m = nn.Sequential(torch.quantization.QuantStub(),

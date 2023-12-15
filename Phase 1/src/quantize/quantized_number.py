@@ -11,6 +11,25 @@ def quantize_and_clip(array, scale, zero_point, bit_width):
     return array
 
 
+def compute_M0repr_and_n(input_scale, weights_scale, output_scale):
+    """
+    Computes M0_repr and n for the quantization of the output of a quantized layer.
+
+    Define M = input_scale * weights_scale / output_scale.
+    Then normalize M = 2^(-n) * M0, where 0.5 <= M0 < 1.
+    Let M0_repr = M0 * 2^31.
+    :return: M0_repr, n
+    """
+    M = input_scale * weights_scale / output_scale
+    n = -np.ceil(np.log2(M)).astype(np.int_)
+    for i in range(len(n)):
+        if np.allclose(2. ** (-n[i]), M[i]):  # M is a power of 2
+            n[i] -= 1
+    M0 = M / (2. ** (-n))  # M0 in [0.5, 1)
+    M0_repr = np.round(M0 * 2 ** 31).astype(np.int32)
+    return M0_repr, n
+
+
 class QuantizedArray:
     def __init__(self, array, scale, zero_point, bit_width, per_channel=False):
         # check if array is consistent with bit_width
