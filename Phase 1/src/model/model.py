@@ -20,14 +20,13 @@ class MNIST_Net(nn.Module):
 
     def forward(self, x):
         x = self.conv1(x)
-        print('x before relu1: ', x)
         x = self.relu1(x)
-        print('x after relu1: ', x)
+        x = self.conv2(x)
+        x = self.relu2(x)
+        print('x after relu2: ', x)
         print('maximum value:', torch.max(x))
         # find the coord of the max value
         print(x.shape, np.unravel_index(torch.argmax(x), x.shape))
-        x = self.conv2(x)
-        x = self.relu2(x)
         x = self.max_pool(x)
         x = self.dropout1(x)
         x = torch.flatten(x, 1)
