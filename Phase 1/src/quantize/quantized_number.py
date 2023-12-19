@@ -33,8 +33,12 @@ def compute_M0repr_and_n(input_scale, weights_scale, output_scale):
 class QuantizedArray:
     def __init__(self, array, scale, zero_point, bit_width, per_channel=False):
         # check if array is consistent with bit_width
+        assert 1 <= bit_width <= 32, 'bit_width must be between 1 and 32'
         assert np.all(array <= 2 ** (bit_width - 1) - 1) and np.all(array >= -2 ** (bit_width - 1)), \
             'array is not consistent with bit_width'
+        assert np.all(zero_point <= 2 ** (bit_width - 1) - 1) and np.all(zero_point >= -2 ** (bit_width - 1)), \
+            'zero_point is not consistent with bit_width'
+        assert np.all(scale > 0), 'scale must be positive'
 
         self.array = np.array(array, dtype=np.int64)
         self.scale = np.array(scale, dtype=np.float64)
@@ -52,7 +56,7 @@ class QuantizedArray:
     @classmethod
     def quantize_per_tensor(cls, array: Union[list, np.ndarray], scale: Union[float, int], zero_point: int,
                             bit_width: int):
-        assert 0 < bit_width <= 64, 'bit_width must be between 1 and 64'
+        assert 0 < bit_width <= 32, 'bit_width must be between 1 and 32'
 
         array = quantize_and_clip(array, scale, zero_point, bit_width)
 
@@ -60,7 +64,7 @@ class QuantizedArray:
 
     @classmethod
     def quantize_per_channel(cls, array: np.ndarray, scale: np.ndarray, zero_point: np.ndarray, bit_width: int):
-        assert 0 < bit_width <= 64, 'bit_width must be between 1 and 64'
+        assert 0 < bit_width <= 32, 'bit_width must be between 1 and 32'
         assert array.shape[0] == scale.shape[0] == zero_point.shape[0], \
             'array, scale, and zero_point must have the same number of channels'
         result = np.empty(array.shape, dtype=np.int64)
@@ -131,15 +135,29 @@ class QuantizedArray:
             for h in range(outH):
                 for w in range(outW):
                     # Convolution
-                    q = np.zeros([1], dtype=np.int32)
+                    q = np.zeros([1], dtype=np.int64)  # but values clipped within 32 bit
                     for c_in in range(C_in):
                         for kh in range(kH):
                             for kw in range(kW):
-                                q += (weight.array[c_out, c_in, kh, kw] - weight.zero_point[c_out]) * \
-                                     (self.array[c_in, h + kh, w + kw] - self.zero_point)
+                                a1 = np.clip(weight.array[c_out, c_in, kh, kw] - weight.zero_point[c_out], -2 ** 31,
+                                             2 ** 31 - 1)
+                                a2 = np.clip(self.array[c_in, h + kh, w + kw] - self.zero_point, -2 ** 31, 2 ** 31 - 1)
+                                delta = a1 * a2  # 2 ** 32 squared would overflow int64, so clip each term
+
+                                # clip delta, prevent overflow
+                                delta = np.clip(delta, np.iinfo(np.int32).min - q, np.iinfo(np.int32).max - q)
+                                q += delta
+                                # if delta > np.iinfo(np.int32).max - q:
+                                #     q = np.iinfo(np.int32).max
+                                # elif delta < np.iinfo(np.int32).min - q:
+                                #     q = np.iinfo(np.int32).min
+                                # else:
+                                #     q += delta
 
                     # Add bias
-                    q += bias.array[c_out]
+                    delta = bias.array[c_out]
+                    delta = np.clip(delta, np.iinfo(np.int32).min - q, np.iinfo(np.int32).max - q)
+                    q += delta
 
                     # multiply by M
                     q = np.multiply(q, M0_repr[c_out], dtype=np.int64)

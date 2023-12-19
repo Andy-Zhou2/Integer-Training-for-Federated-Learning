@@ -29,7 +29,7 @@ def get_q_params_from_range(min_value: float, max_value: float, bit_width: int):
         max_value = 0
 
     scale = (max_value - min_value) / (2 ** bit_width - 1)
-    unsigned_zero_point = np.round(-min_value / scale).astype(np.int_)
+    unsigned_zero_point = np.round(-min_value / scale).astype(np.int64)
 
     if unsigned_zero_point == 0:
         scale = max_value / (2 ** bit_width - 1)
@@ -43,9 +43,10 @@ def get_q_params_from_range(min_value: float, max_value: float, bit_width: int):
     return scale, zero_point
 
 
-def get_per_channel_q_params(weight):
+def get_per_channel_q_params(weight, bit_width):
     """
     Calculates the per-channel scale and zero_point of the quantized weight (or bias).
+    :param bit_width: The bit-width used
     :param weight: The weight (or bias) to be quantized
     :return: (array of scales, array of zero_points)
     """
@@ -56,7 +57,7 @@ def get_per_channel_q_params(weight):
     for ch in range(num_channels):
         scales[ch], zero_points[ch] = get_q_params_from_range(weight[ch].min().item(),
                                                               weight[ch].max().item(),
-                                                              bit_width=8)
+                                                              bit_width=bit_width)
     return scales, zero_points
 
 
@@ -68,21 +69,25 @@ input_scale, input_zero_point = get_q_params_from_range(min_value=-0.42421296238
 data = QuantizedArray.quantize_per_tensor(data, input_scale, input_zero_point, input_bit_width)
 
 conv1_weight = model_ckpt['conv1.weight']
+# print(f'weight before quantization: {conv1_weight.numpy()}')
 conv1_weight_bit_width = 8
-conv1_weight_scale, conv1_weight_zero_point = get_per_channel_q_params(conv1_weight)
+conv1_weight_scale, conv1_weight_zero_point = get_per_channel_q_params(conv1_weight, conv1_weight_bit_width)
+# print(f'scale: {conv1_weight_scale}, zero_point: {conv1_weight_zero_point}')
 conv1_weight = QuantizedArray.quantize_per_channel(conv1_weight, conv1_weight_scale, conv1_weight_zero_point,
                                                    conv1_weight_bit_width)
 
+# print(f'weight after quantization: {conv1_weight.dequantize()}')
+
 conv1_bias = model_ckpt['conv1.bias']
-print(f'Maximum bias: {conv1_bias.max()}, Minimum bias: {conv1_bias.min()}')
+# print(f'Maximum bias: {conv1_bias.max()}, Minimum bias: {conv1_bias.min()}')
 conv1_bias_bit_width = 32
 conv1_bias_scale = input_scale * conv1_weight_scale
 conv1_bias_zero_point = np.zeros(conv1_bias.shape, dtype=np.int64)
 conv1_bias = QuantizedArray.quantize_per_channel(conv1_bias, conv1_bias_scale, conv1_bias_zero_point,
                                                  conv1_bias_bit_width)
 # sanity check
-print(f'Scale: {conv1_bias_scale}')
-print(f'Maximum value represented: {conv1_bias_scale * (2 ** (conv1_bias_bit_width - 1) - 1)}')
+# print(f'Scale: {conv1_bias_scale}')
+# print(f'Maximum value represented: {conv1_bias_scale * (2 ** (conv1_bias_bit_width - 1) - 1)}')
 
 act1_bit_width = 8
 act1_scale, act1_zero_point = get_q_params_from_range(min_value=0,  # simulate relu
@@ -92,5 +97,8 @@ act1_scale, act1_zero_point = get_q_params_from_range(min_value=0,  # simulate r
 act1_M0repr, act1_n = compute_M0repr_and_n(input_scale, conv1_weight_scale, act1_scale)
 
 act1 = data.conv2d(conv1_weight, conv1_bias, act1_scale, act1_zero_point, act1_bit_width, act1_M0repr, act1_n)
+act1_dq = act1.dequantize()
 print(act1.dequantize())
+print(f'Maximum of dq: {act1_dq.max()}, Minimum of dq: {act1_dq.min()}')
+print(f'value at max position: {act1_dq[3, 23, 5]}')
 

@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -22,6 +23,9 @@ class MNIST_Net(nn.Module):
         print('x before relu1: ', x)
         x = self.relu1(x)
         print('x after relu1: ', x)
+        print('maximum value:', torch.max(x))
+        # find the coord of the max value
+        print(x.shape, np.unravel_index(torch.argmax(x), x.shape))
         x = self.conv2(x)
         x = self.relu2(x)
         x = self.max_pool(x)
