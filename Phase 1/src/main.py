@@ -3,6 +3,7 @@ import torch
 from torchvision import datasets, transforms
 from quantize.quantized_number import QuantizedArray, compute_M0repr_and_n
 import time
+import os
 
 model_ckpt = torch.load('data/model_ckpt/mnist_cnn.pt', map_location=torch.device('cpu'))
 
@@ -62,62 +63,72 @@ def get_per_channel_q_params(weight, bit_width):
     return scales, zero_points
 
 t0 = time.time()
-data = dataset_train[0][0]
-input_bit_width = 8
-input_scale, input_zero_point = get_q_params_from_range(min_value=-0.4242129623889923,
-                                                        max_value=2.821486711502075,
-                                                        bit_width=input_bit_width)
-data = QuantizedArray.quantize_per_tensor(data, input_scale, input_zero_point, input_bit_width)
+# data = dataset_train[0][0]
+# input_bit_width = 8
+# input_scale, input_zero_point = get_q_params_from_range(min_value=-0.4242129623889923,
+#                                                         max_value=2.821486711502075,
+#                                                         bit_width=input_bit_width)
+# data = QuantizedArray.quantize_per_tensor(data, input_scale, input_zero_point, input_bit_width)
+#
+# conv1_weight = model_ckpt['conv1.weight']
+# conv1_weight_bit_width = 8
+# conv1_weight_scale, conv1_weight_zero_point = get_per_channel_q_params(conv1_weight, conv1_weight_bit_width)
+# conv1_weight = QuantizedArray.quantize_per_channel(conv1_weight, conv1_weight_scale, conv1_weight_zero_point,
+#                                                    conv1_weight_bit_width)
+#
+# conv1_bias = model_ckpt['conv1.bias']
+# conv1_bias_bit_width = 32
+# conv1_bias_scale = input_scale * conv1_weight_scale
+# conv1_bias_zero_point = np.zeros(conv1_bias.shape, dtype=np.int64)
+# conv1_bias = QuantizedArray.quantize_per_channel(conv1_bias, conv1_bias_scale, conv1_bias_zero_point,
+#                                                  conv1_bias_bit_width)
+#
+# act1_bit_width = 8
+# act1_scale, act1_zero_point = get_q_params_from_range(min_value=0,  # simulate relu
+#                                                       max_value=3.0551493167877197,
+#                                                       bit_width=act1_bit_width)
+# act1_M0repr, act1_n = compute_M0repr_and_n(input_scale, conv1_weight_scale, act1_scale)
+#
+# act1 = data.conv2d(conv1_weight, conv1_bias, act1_scale, act1_zero_point, act1_bit_width, act1_M0repr, act1_n)
+# print(f'act1 in total takes {time.time() - t0:.3f} seconds')
+# act1_dq = act1.dequantize()
+# # print(act1.dequantize())
+# print(f'Maximum of dq: {act1_dq.max()}, Minimum of dq: {act1_dq.min()}')
+# print(f'value at max position: {act1_dq[3, 23, 5]}')
+# # create folders
+#
+# os.makedirs('data/quantized_array', exist_ok=True)
+# np.save('data/quantized_array/ac1.npy', act1)
+#
+# conv2_weight = model_ckpt['conv2.weight']
+# conv2_weight_bit_width = 8
+# conv2_weight_scale, conv2_weight_zero_point = get_per_channel_q_params(conv2_weight, conv2_weight_bit_width)
+# conv2_weight = QuantizedArray.quantize_per_channel(conv2_weight, conv2_weight_scale, conv2_weight_zero_point,
+#                                                    conv2_weight_bit_width)
+#
+# conv2_bias = model_ckpt['conv2.bias']
+# conv2_bias_bit_width = 32
+# conv2_bias_scale = act1_scale * conv2_weight_scale
+# conv2_bias_zero_point = np.zeros(conv2_bias.shape, dtype=np.int64)
+# conv2_bias = QuantizedArray.quantize_per_channel(conv2_bias, conv2_bias_scale, conv2_bias_zero_point,
+#                                                  conv2_bias_bit_width)
+#
+# act2_bit_width = 8
+# act2_scale, act2_zero_point = get_q_params_from_range(min_value=0,  # simulate relu
+#                                                       max_value=4.931317329406738,
+#                                                       bit_width=act2_bit_width)
+# act2_M0repr, act2_n = compute_M0repr_and_n(act1_scale, conv2_weight_scale, act2_scale)
+#
+# act2 = act1.conv2d(conv2_weight, conv2_bias, act2_scale, act2_zero_point, act2_bit_width, act2_M0repr, act2_n)
+# print(f'act2 in total takes {time.time() - t0:.3f} seconds')
+# act2_dq = act2.dequantize()
+# # print(act2.dequantize())
+# print(f'Maximum of dq: {act2_dq.max()}, Minimum of dq: {act2_dq.min()}')
+# print(f'value at max position: {act2_dq[3, 23, 5]}')
+#
+# # save the QuantizedArray to disk using numpy.save
+# np.save('data/quantized_array/act2.npy', act2)
 
-conv1_weight = model_ckpt['conv1.weight']
-conv1_weight_bit_width = 8
-conv1_weight_scale, conv1_weight_zero_point = get_per_channel_q_params(conv1_weight, conv1_weight_bit_width)
-conv1_weight = QuantizedArray.quantize_per_channel(conv1_weight, conv1_weight_scale, conv1_weight_zero_point,
-                                                   conv1_weight_bit_width)
-
-conv1_bias = model_ckpt['conv1.bias']
-conv1_bias_bit_width = 32
-conv1_bias_scale = input_scale * conv1_weight_scale
-conv1_bias_zero_point = np.zeros(conv1_bias.shape, dtype=np.int64)
-conv1_bias = QuantizedArray.quantize_per_channel(conv1_bias, conv1_bias_scale, conv1_bias_zero_point,
-                                                 conv1_bias_bit_width)
-
-act1_bit_width = 8
-act1_scale, act1_zero_point = get_q_params_from_range(min_value=0,  # simulate relu
-                                                      max_value=3.0551493167877197,
-                                                      bit_width=act1_bit_width)
-act1_M0repr, act1_n = compute_M0repr_and_n(input_scale, conv1_weight_scale, act1_scale)
-
-act1 = data.conv2d(conv1_weight, conv1_bias, act1_scale, act1_zero_point, act1_bit_width, act1_M0repr, act1_n)
-print(f'act1 in total takes {time.time() - t0:.3f} seconds')
-act1_dq = act1.dequantize()
-# print(act1.dequantize())
-print(f'Maximum of dq: {act1_dq.max()}, Minimum of dq: {act1_dq.min()}')
-print(f'value at max position: {act1_dq[3, 23, 5]}')
-
-conv2_weight = model_ckpt['conv2.weight']
-conv2_weight_bit_width = 8
-conv2_weight_scale, conv2_weight_zero_point = get_per_channel_q_params(conv2_weight, conv2_weight_bit_width)
-conv2_weight = QuantizedArray.quantize_per_channel(conv2_weight, conv2_weight_scale, conv2_weight_zero_point,
-                                                   conv2_weight_bit_width)
-
-conv2_bias = model_ckpt['conv2.bias']
-conv2_bias_bit_width = 32
-conv2_bias_scale = act1_scale * conv2_weight_scale
-conv2_bias_zero_point = np.zeros(conv2_bias.shape, dtype=np.int64)
-conv2_bias = QuantizedArray.quantize_per_channel(conv2_bias, conv2_bias_scale, conv2_bias_zero_point,
-                                                 conv2_bias_bit_width)
-
-act2_bit_width = 8
-act2_scale, act2_zero_point = get_q_params_from_range(min_value=0,  # simulate relu
-                                                      max_value=4.931317329406738,
-                                                      bit_width=act2_bit_width)
-act2_M0repr, act2_n = compute_M0repr_and_n(act1_scale, conv2_weight_scale, act2_scale)
-
-act2 = act1.conv2d(conv2_weight, conv2_bias, act2_scale, act2_zero_point, act2_bit_width, act2_M0repr, act2_n)
-print(f'act2 in total takes {time.time() - t0:.3f} seconds')
-act2_dq = act2.dequantize()
-# print(act2.dequantize())
-print(f'Maximum of dq: {act2_dq.max()}, Minimum of dq: {act2_dq.min()}')
-print(f'value at max position: {act2_dq[3, 23, 5]}')
-
+act2: QuantizedArray = np.load('data/quantized_array/act2.npy', allow_pickle=True).item()
+pooled_act2 = act2.maxpool2d(2)
+print(pooled_act2.dequantize(), pooled_act2.shape)

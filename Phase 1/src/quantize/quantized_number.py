@@ -147,12 +147,6 @@ class QuantizedArray:
                                 # clip delta, prevent overflow
                                 delta = np.clip(delta, np.iinfo(np.int32).min - q, np.iinfo(np.int32).max - q)
                                 q += delta
-                                # if delta > np.iinfo(np.int32).max - q:
-                                #     q = np.iinfo(np.int32).max
-                                # elif delta < np.iinfo(np.int32).min - q:
-                                #     q = np.iinfo(np.int32).min
-                                # else:
-                                #     q += delta
 
                     # Add bias
                     delta = bias.array[c_out]
@@ -178,3 +172,66 @@ class QuantizedArray:
         output = QuantizedArray(output, scale, zero_point, bit_width)
 
         return output
+
+    def linear(self, weight: 'QuantizedArray', bias: 'QuantizedArray', scale, zero_point, bit_width,
+               M0_repr: np.ndarray[np.int32], n: np.ndarray[np.int_]):
+        # input: (C_in)
+        # weight: (C_out, C_in)
+        # bias: (C_out)
+        # scale, zero_point, bit_width: those of the output
+        # bias should have scale of S1 * S2 and zero_point 0
+        # Normalize M := S1 * S2 / S3 = 2^(-n) * M0, where 0.5 <= M0 < 1
+        # M0_repr: M0 * 2^31
+        assert not self.per_channel, 'Per-channel quantization not supported for input'
+        assert weight.per_channel, 'Per-channel quantization required for weight'
+        assert bias.per_channel, 'Per-channel quantization required for bias'
+        assert np.all(bias.zero_point == 0), 'Bias must be zero-pointed at 0'
+        assert np.allclose(bias.scale, self.scale * weight.scale), \
+            'Bias scale must be equal to input scale * weight scale'
+
+
+        C_out, C_in = weight.shape
+        assert self.shape[0] == C_in, 'Input and weight must have compatible shapes'
+        assert bias.shape[0] == C_out, 'Bias and weight must have compatible shapes'
+
+        output = np.empty((C_out,), dtype=np.int64)
+        for c_out in range(C_out):
+            # Linear
+            q = np.zeros([1], dtype=np.int64)
+            for c_in in range(C_in):
+                a1 = np.clip(weight.array[c_out, c_in] - weight.zero_point[c_out], -2 ** 31, 2 ** 31 - 1)
+                a2 = np.clip(self.array[c_in] - self.zero_point, -2 ** 31, 2 ** 31 - 1)
+                delta = a1 * a2
+                delta = np.clip(delta, np.iinfo(np.int32).min - q, np.iinfo(np.int32).max - q)
+                q += delta
+
+            # Add bias
+            delta = bias.array[c_out]
+            delta = np.clip(delta, np.iinfo(np.int32).min - q, np.iinfo(np.int32).max - q)
+            q += delta
+            q = np.multiply(q, M0_repr[c_out], dtype=np.int64)
+            bits_to_shift = n[c_out] + 31
+            q += np.bitwise_and(q, np.left_shift(1, bits_to_shift - 1, dtype=np.int64))  # to round
+            q = np.right_shift(q, bits_to_shift)
+            q += zero_point
+            q = np.clip(q, -2 ** (bit_width - 1), 2 ** (bit_width - 1) - 1)
+
+            output[c_out] = q
+        output = QuantizedArray(output, scale, zero_point, bit_width)
+        return output
+
+    def maxpool2d(self, kernel_size):
+        assert not self.per_channel, 'Per-channel quantization not supported for input'
+
+        stride = kernel_size
+
+        C, H, W = self.shape
+        outH = H // stride
+        outW = W // stride
+        output = np.empty((C, outH, outW), dtype=np.int64)
+        for c in range(C):
+            for h in range(outH):
+                for w in range(outW):
+                    output[c, h, w] = np.max(self.array[c, h * stride:h * stride + kernel_size,
+                                             w * stride:w * stride + kernel_size])
+        return QuantizedArray(output, self.scale, self.zero_point, self.bit_width)
