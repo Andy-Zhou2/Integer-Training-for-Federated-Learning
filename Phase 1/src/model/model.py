@@ -23,24 +23,28 @@ class MNIST_Net(nn.Module):
         x = self.relu1(x)
         x = self.conv2(x)
         x = self.relu2(x)
-
         x = self.max_pool(x)
+        x = self.dropout1(x)
+
+        if x.ndim == 4:
+            x = torch.flatten(x, 1)
+        else:  # bs = 1, ndim = 3
+            x = torch.flatten(x, 0)
+
+
+        x = self.fc1(x)
+        x = self.relu3(x)
+
+
+
+        x = self.dropout2(x)
+        x = self.fc2(x)
 
         print('x after maxpool: ', x)
         print('maximum value:', torch.max(x))
         # find the coord of the max value
         print(x.shape, np.unravel_index(torch.argmax(x), x.shape))
 
-
-        x = self.dropout1(x)
-        if x.ndim == 4:
-            x = torch.flatten(x, 1)
-        else:  # bs = 1, ndim = 3
-            x = torch.flatten(x, 0)
-        x = self.fc1(x)
-        x = self.relu3(x)
-        x = self.dropout2(x)
-        x = self.fc2(x)
         output = self.log_softmax(x)
         # print(f'output: {output}')
         return output

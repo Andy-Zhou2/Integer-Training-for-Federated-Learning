@@ -235,3 +235,8 @@ class QuantizedArray:
                     output[c, h, w] = np.max(self.array[c, h * stride:h * stride + kernel_size,
                                              w * stride:w * stride + kernel_size])
         return QuantizedArray(output, self.scale, self.zero_point, self.bit_width)
+
+    def flatten(self):
+        assert not self.per_channel, 'Per-channel quantization not supported for input'
+
+        return QuantizedArray(self.array.flatten(), self.scale, self.zero_point, self.bit_width)
