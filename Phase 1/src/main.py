@@ -160,8 +160,6 @@ def infer(data, bit_width_config):
     return act4
 
 if __name__ == '__main__':
-    total_test = 0
-    correct_test = 0
     bit_width_config = {
         'input': 8,
         'conv1_weight': 8,
@@ -178,12 +176,21 @@ if __name__ == '__main__':
         'act4': 8,
     }
 
-    for data, answer in dataset_test:
-        model_result = infer(data, bit_width_config).array.argmax()
-        print(answer, model_result)
+    for bw in [4,5,6,7]:
+        total_test = 0
+        correct_test = 0
+        for key in bit_width_config:
+            if 'bias' not in key:
+                bit_width_config[key] = bw
+        print('bit_width_config', bit_width_config)
 
-        if model_result == answer:
-            correct_test += 1
-        total_test += 1
+        for data, answer in dataset_test:
+            model_result = infer(data, bit_width_config).array.argmax()
+            # print(answer, model_result)
 
-        print(f'Accuracy: {correct_test / total_test * 100:.2f}%, Correct: {correct_test}, Total: {total_test}')
+            if model_result == answer:
+                correct_test += 1
+            total_test += 1
+
+            if total_test % 100 == 0:
+                print(f'Accuracy: {correct_test / total_test * 100:.2f}%, Correct: {correct_test}, Total: {total_test}')
