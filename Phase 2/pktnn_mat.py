@@ -10,10 +10,21 @@ class PktMat:
     def __init__(self, row=0, col=0):
         self.init_zeros(row, col)
 
+        self.prev_layer = None
+        self.next_layer = None
+        self.dummy3d = None
+
     def __getitem__(self, key):
         # does not need __setitem__ because we can use self.mat[key] = value
         # it returns a numpy reference
         return self.mat[key]
+
+    def __setitem__(self, key, value):
+        # it returns a numpy reference
+        self.mat[key] = value
+
+    def get_max_index_in_row(self, row):
+        return self.mat[row].argmax()
 
 if __name__ == '__main__':
     m = PktMat(3, 4)
