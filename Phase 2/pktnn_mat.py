@@ -45,9 +45,67 @@ class PktMat:
     def dims_equal(self, other):
         return self.row == other.row and self.col == other.col
 
+    def transpose_of(self, other):
+        self.init_zeros(other.col, other.row)
+        self.mat = np.transpose(other.mat)
+        return self
+
+    def self_div_const(self, const):
+        self.mat = np.divide(self.mat, const)
+        return self
+
+    def mat_div_const(self, a, const):
+        self.init_zeros(a.row, a.col)
+        self.mat = np.divide(a.mat, const)
+        return self
+
+    def reset_all(self, row, col, value):
+        self.init_zeros(row, col)
+        self.mat.fill(value)
+        return self
+
+    def clamp_mat(self, min, max):
+        self.mat = np.clip(self.mat, min, max)
+        return self
+
+    def mat_elem_div_mat(self, a, b):
+        self.init_zeros(a.row, a.col)
+        self.mat = np.divide(a.mat, b.mat)
+        return self
+
+    def self_elem_div_mat(self, b):
+        self.mat = np.divide(self.mat, b.mat)
+        return self
+
+    def mat_elem_mul_mat(self, a, b):
+        self.init_zeros(a.row, a.col)
+        self.mat = np.multiply(a.mat, b.mat)
+        return self
+
+    def self_mul_const(self, const):
+        self.mat = np.multiply(self.mat, const)
+        return self
+
+    def mat_mul_const(self, a, const):
+        self.init_zeros(a.row, a.col)
+        self.mat = np.multiply(a.mat, const)
+        return self
+
+    def deep_copy_of(self, other):
+        self.init_zeros(other.row, other.col)
+        self.mat = other.mat.copy()
+        return self
+    def mat_elem_mul_self(self, other):
+        temp = self.deep_copy_of(self)
+        self.mat_elem_mul_mat(other, temp)
+        return self
+
 if __name__ == '__main__':
     m = PktMat(3, 4)
     print(m.mat)
     print(m[0][1], type(m[0][1]))
     m[0][2] = 3
+    print(m.mat)
+
+    m[0:2] = 5
     print(m.mat)
