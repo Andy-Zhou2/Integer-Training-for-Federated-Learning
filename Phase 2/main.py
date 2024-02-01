@@ -2,6 +2,7 @@ import numpy as np
 from torchvision import datasets, transforms
 from pktnn_fc import PktFc
 from pktnn_mat import PktMat
+from pktnn_consts import UNSIGNED_4BIT_MAX
 
 transform = transforms.Compose([
     transforms.ToTensor(),
@@ -45,8 +46,6 @@ fc1.set_next_layer(fc2)
 fc2.set_next_layer(fc_last)
 
 fc1.forward(mnist_train_images)
-
-UNSIGNED_4BIT_MAX = 15
 
 train_target_mat = PktMat(num_train_samples, num_classes)
 num_correct = 0

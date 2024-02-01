@@ -1,5 +1,8 @@
 from pktnn_layer import PktLayer
 from pktnn_mat import PktMat
+from pktnn_actv import activate
+from pktnn_consts import *
+
 
 class PktFc(PktLayer):
     def __init__(self, in_dim, out_dim, use_dfa=True, activation='pocket_tanh', use_bn=False):
@@ -9,45 +12,66 @@ class PktFc(PktLayer):
         self.out_dim: int = out_dim
         self.weight = PktMat(in_dim, out_dim)
         self.bias = PktMat(1, out_dim)
-        self.inter = None
-        self.deltas = None
-        self.deltas_transpose = None
-        self.d_actv_transpose = None
-        self.actv_grad_inv = None
+        self.inter = PktMat()
+        self.deltas = PktMat()
+        self.deltas_transpose = PktMat()
+        self.d_actv_transpose = PktMat()
+        self.actv_grad_inv = PktMat()
         self.weight_update = PktMat(in_dim, out_dim)
         self.bias_update = PktMat(1, out_dim)
 
         self.use_bn = use_bn
-        self.mean = None
-        self.variance = None
-        self.stdev_with_eps = None
-        self.standardized = None
-        self.gamma = None
-        self.beta = None
-        self.batch_normalized = None
-        self.d_gamma = None
-        self.d_beta = None
-        self.d_bn = None
-        self.gamma_update = None
-        self.beta_update = None
+        self.mean = PktMat()
+        self.variance = PktMat()
+        self.stdev_with_eps = PktMat()
+        self.standardized = PktMat()
+        self.gamma = PktMat()
+        self.beta = PktMat()
+        self.batch_normalized = PktMat()
+        self.d_gamma = PktMat()
+        self.d_beta = PktMat()
+        self.d_bn = PktMat()
+        self.gamma_update = PktMat()
+        self.beta_update = PktMat()
 
         self.use_dfa = use_dfa
-        self.dfa_weight = None
+        self.dfa_weight = PktMat()
 
         self.name = "fc_noname"
         self.activation = activation
 
-        self.output = None
+        self.output = PktMat()
         self.rowss = self.in_dim
         self.colss = self.out_dim
 
+        self.input = PktMat()
 
-        self.input = None
-
-
+    def batch_normalization(self):
+        raise NotImplementedError
 
     def set_next_layer(self, layer):
         self.next_layer = layer
         layer.prev_layer = self
         return self
 
+    def get_output_for_fc(self):
+        return self.output
+
+    def forward(self, x):
+        if isinstance(x, PktLayer):
+            assert self.next_layer is not x
+            return self.forward(x.get_output_for_fc())
+
+        print('forward: ', x.shape, self.weight.shape)
+        self.inter.mat_mul_mat(x, self.weight)
+
+        if self.use_bn:
+            self.batch_normalization()
+            activate(self.output, self.batch_normalized, self.actv_grad_inv, self.activation, K_BIT, self.in_dim)
+        else:
+            self.inter.self_add_mat(self.bias)
+            activate(self.output, self.inter, self.actv_grad_inv, self.activation, K_BIT, self.in_dim)
+
+        if self.next_layer is not None:
+            self.next_layer.forward(self)
+        return self
