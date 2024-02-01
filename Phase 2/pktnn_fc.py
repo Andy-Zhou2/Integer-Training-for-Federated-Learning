@@ -2,6 +2,7 @@ from pktnn_layer import PktLayer
 from pktnn_mat import PktMat
 from pktnn_actv import activate
 from pktnn_consts import *
+import numpy as np
 
 
 class PktFc(PktLayer):
@@ -63,7 +64,6 @@ class PktFc(PktLayer):
             assert self.next_layer is not x
             return self.forward(x.get_output_for_fc())
 
-        print('forward: ', x.shape, self.weight.shape)
         self.inter.mat_mul_mat(x, self.weight)
 
         if self.use_bn:
@@ -77,8 +77,12 @@ class PktFc(PktLayer):
             self.next_layer.forward(self)
         return self
 
-    def set_random_dfa_weight(self, in_dim, out_dim):
-        raise NotImplementedError
+    def set_random_dfa_weight(self, r, c):
+        self.dfa_weight.init_zeros(r, c)
+        # int range = floorSqrt((12 * SHRT_MAX) / (mInDim + mOutDim));
+        range = np.int_(np.floor(np.sqrt((12 * SHRT_MAX) / (r + c))))
+        self.dfa_weight.set_random(False, -range, range)
+
 
     def compute_deltas(self, last_layer_delta_mat, lr_inv):
         if self.use_bn:
@@ -121,7 +125,7 @@ class PktFc(PktLayer):
             d_beta_matrix.mat_mul_mat(one_column_vec, self.d_beta)
             d_beta_matrix.self_mul_const(-1)
 
-            self.deltas.init_zeros(num_items, feature_dims, 0)
+            self.deltas.init_zeros(num_items, feature_dims)
             self.deltas.mat_add_mat(d_gamma_xhat, d_bn_times_n)
             self.deltas.self_add_mat(d_beta_matrix)
             self.deltas.mat_elem_mul_self(gamma_stdev)
@@ -177,8 +181,8 @@ class PktFc(PktLayer):
             self.bias_update.self_div_const(-lr_inv)
             self.bias.self_add_mat(self.bias_update)
 
-        self.weight.clamp_mat(-32768, 32767)
-        self.bias.clamp_mat(-32768, 32767)
+        self.weight.clamp_mat(SHRT_MIN, SHRT_MAX)
+        self.bias.clamp_mat(SHRT_MIN, SHRT_MAX)
 
         if self.prev_layer is not None:
             self.prev_layer.backward(last_layer_delta_mat, lr_inv)

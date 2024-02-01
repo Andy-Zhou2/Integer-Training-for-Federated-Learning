@@ -38,7 +38,6 @@ class PktMat:
         self.mat = np.add(a.mat, b.mat)
 
     def self_add_mat(self, b):
-        self.mat += b.mat
         self.mat_add_mat(self, b)
         return self
 
@@ -99,6 +98,11 @@ class PktMat:
         temp = self.deep_copy_of(self)
         self.mat_elem_mul_mat(other, temp)
         return self
+
+    def set_random(self, allow_zero: bool, min_val: int, max_val: int):
+        self.mat = np.random.randint(min_val, max_val, size=(self.row, self.col), dtype=np.int64)
+        if not allow_zero:
+            self.mat += (self.mat == 0)
 
 if __name__ == '__main__':
     m = PktMat(3, 4)
