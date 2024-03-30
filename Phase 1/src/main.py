@@ -6,7 +6,7 @@ import time
 import os
 
 # model_ckpt = torch.load('data/model_ckpt/mnist_cnn.pt', map_location=torch.device('cpu'))
-model_ckpt = torch.load(r'C:\Users\zhouw\Integer-Training-for-Federated-Learning\MNIST\model_ckpt\mnist_2_4.pt', map_location=torch.device('cpu'))
+model_ckpt = torch.load(r'../../MNIST/model_ckpt/mnist_2_4.pt', map_location=torch.device('cpu'))
 
 transform = transforms.Compose([
     transforms.ToTensor(),

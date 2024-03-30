@@ -8,10 +8,22 @@ from pktnn_loss import batch_l2_loss_delta
 transform = transforms.Compose([
     transforms.ToTensor(),
 ])
-dataset_train = datasets.MNIST('./data', train=True,
-                               transform=transform, download=True)
-dataset_test = datasets.MNIST('./data', train=False,
-                              transform=transform, download=True)
+
+dataset_name = 'fashion_mnist'  # mnist or fashion_mnist
+assert dataset_name in ['mnist', 'fashion_mnist']
+
+if dataset_name == 'mnist':
+    dataset_train = datasets.MNIST('./data', train=True,
+                                   transform=transform, download=True)
+    dataset_test = datasets.MNIST('./data', train=False,
+                                  transform=transform, download=True)
+elif dataset_name == 'fashion_mnist':
+    dataset_train = datasets.FashionMNIST('./data', train=True,
+                                          transform=transform, download=True)
+    dataset_test = datasets.FashionMNIST('./data', train=False,
+                                         transform=transform, download=True)
+else:  # should not reach here
+    raise ValueError('Invalid dataset name')
 
 num_train_samples = len(dataset_train)
 num_test_samples = len(dataset_test)
@@ -36,26 +48,42 @@ for i in range(num_test_samples):
     mnist_test_labels[i][0] = dataset_test[i][1]
     mnist_test_images[i] = dataset_test[i][0].flatten()
 
+if dataset_name == 'mnist':
+    fc_dim1 = 100
+    fc_dim2 = 50
+    activation = 'pocket_tanh'
 
-fc_dim1 = 100
-fc_dim2 = 50
-activation = 'pocket_tanh'
+    fc1 = PktFc(dim_input, fc_dim1, use_dfa=True, activation=activation)
+    fc2 = PktFc(fc_dim1, fc_dim2, use_dfa=True, activation=activation)
+    fc_last = PktFc(fc_dim2, num_classes, use_dfa=True, activation=activation)
 
-fc1 = PktFc(dim_input, fc_dim1, use_dfa=True, activation=activation)
-fc2 = PktFc(fc_dim1, fc_dim2, use_dfa=True, activation=activation)
-fc_last = PktFc(fc_dim2, num_classes, use_dfa=True, activation=activation)
+    fc1.set_next_layer(fc2)
+    fc2.set_next_layer(fc_last)
+elif dataset_name == 'fashion_mnist':
+    fc_dim1 = 200
+    fc_dim2 = 100
+    fc_dim3 = 50
+    activation = 'pocket_tanh'
 
-fc1.set_next_layer(fc2)
-fc2.set_next_layer(fc_last)
+    fc1 = PktFc(dim_input, fc_dim1, use_dfa=True, activation=activation)
+    fc2 = PktFc(fc_dim1, fc_dim2, use_dfa=True, activation=activation)
+    fc3 = PktFc(fc_dim2, fc_dim3, use_dfa=True, activation=activation)
+    fc_last = PktFc(fc_dim3, num_classes, use_dfa=True, activation=activation)
 
-# fc1.forward(mnist_train_images)
+    fc1.set_next_layer(fc2)
+    fc2.set_next_layer(fc3)
+    fc3.set_next_layer(fc_last)
+else:  # should not reach here
+    raise ValueError('Invalid dataset name')
+
+fc1.forward(mnist_train_images)
 
 train_target_mat = PktMat(num_train_samples, num_classes)
 num_correct = 0
 for r in range(num_train_samples):
     train_target_mat[r][mnist_train_labels[r][0]] = UNSIGNED_4BIT_MAX
-    # if train_target_mat.get_max_index_in_row(r) == fc_last.output.get_max_index_in_row(r):
-    #     num_correct += 1
+    if train_target_mat.get_max_index_in_row(r) == fc_last.output.get_max_index_in_row(r):
+        num_correct += 1
 print(f"Initial training accuracy: {num_correct}, {num_train_samples}, {num_correct / num_train_samples * 100}%")
 #
 test_target_mat = PktMat(num_test_samples, num_classes)
@@ -70,7 +98,7 @@ print(f"Initial testing accuracy: {num_correct / num_test_samples * 100}%")
 loss_delta_mat = PktMat()
 # batch_loss_delta_mat = PktMat()
 
-EPOCH = 3
+EPOCH = 100
 BATCH_SIZE = 20  # too big could cause overflow
 
 lr_inv = np.int_(1000)
@@ -101,7 +129,7 @@ for epoch in range(EPOCH):
 
         fc1.forward(mini_batch_images)
 
-        sum_loss += sum(1/2 * np.square(mini_batch_train_targets.mat - fc_last.output.mat).flatten())
+        sum_loss += sum(1 / 2 * np.square(mini_batch_train_targets.mat - fc_last.output.mat).flatten())
         sum_loss_delta = batch_l2_loss_delta(loss_delta_mat, mini_batch_train_targets, fc_last.output)
 
         for r in range(BATCH_SIZE):
@@ -109,7 +137,8 @@ for epoch in range(EPOCH):
                 epoch_num_correct += 1
 
         fc_last.backward(loss_delta_mat, lr_inv)
-    print(f'Epoch {epoch}, loss: {sum_loss / num_train_samples}, accuracy: {epoch_num_correct / num_train_samples * 100}%')
+    print(
+        f'Epoch {epoch}, loss: {sum_loss / num_train_samples}, accuracy: {epoch_num_correct / num_train_samples * 100}%')
 
     # test on test set
     fc1.forward(mnist_test_images)
