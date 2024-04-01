@@ -13,14 +13,14 @@ dataset_name = 'fashion_mnist'  # mnist or fashion_mnist
 assert dataset_name in ['mnist', 'fashion_mnist']
 
 if dataset_name == 'mnist':
-    dataset_train = datasets.MNIST('./data', train=True,
+    dataset_train = datasets.MNIST('../data', train=True,
                                    transform=transform, download=True)
-    dataset_test = datasets.MNIST('./data', train=False,
+    dataset_test = datasets.MNIST('../data', train=False,
                                   transform=transform, download=True)
 elif dataset_name == 'fashion_mnist':
-    dataset_train = datasets.FashionMNIST('./data', train=True,
+    dataset_train = datasets.FashionMNIST('../data', train=True,
                                           transform=transform, download=True)
-    dataset_test = datasets.FashionMNIST('./data', train=False,
+    dataset_test = datasets.FashionMNIST('../data', train=False,
                                          transform=transform, download=True)
 else:  # should not reach here
     raise ValueError('Invalid dataset name')
