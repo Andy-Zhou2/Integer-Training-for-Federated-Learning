@@ -43,10 +43,10 @@ mnist_train_images = PktMat(num_train_samples, dim_input)
 mnist_test_labels = PktMat(num_test_samples, 1)
 mnist_test_images = PktMat(num_test_samples, dim_input)
 
-mnist_train_labels.mat = dataset_train.test_labels.numpy().reshape(-1, 1)
-mnist_train_images.mat = dataset_train.test_data.numpy().reshape(-1, dim_input)
-mnist_test_labels.mat = dataset_test.test_labels.numpy().reshape(-1, 1)
-mnist_test_images.mat = dataset_test.test_data.numpy().reshape(-1, dim_input)
+mnist_train_labels.mat = dataset_train.targets.numpy().reshape(-1, 1)
+mnist_train_images.mat = dataset_train.data.numpy().reshape(-1, dim_input)
+mnist_test_labels.mat = dataset_test.targets.numpy().reshape(-1, 1)
+mnist_test_images.mat = dataset_test.data.numpy().reshape(-1, dim_input)
 
 print('Creating model')
 if dataset_name == 'mnist':
@@ -126,7 +126,7 @@ for epoch in range(1, EPOCH + 1):
     epoch_num_correct = 0
     num_iter = num_train_samples // BATCH_SIZE
 
-    for i in range(10):  # TODO: num_iter
+    for i in range(100):  # TODO: num_iter
         print('\n')
         print('iter:', i)
         mini_batch_images = PktMat(BATCH_SIZE, dim_input)
@@ -140,12 +140,12 @@ for epoch in range(1, EPOCH + 1):
         print('mini_batch_images:', mini_batch_images.sum())
         fc1.forward(mini_batch_images)
 
-        if i == 0:
-            # print output
-            print(f'target:')
-            mini_batch_train_targets.print()
-            print(f'batch 1 output:')
-            fc_last.output.print()
+        # if i == 0:
+        #     # print output
+        #     print(f'target:')
+        #     mini_batch_train_targets.print()
+        #     print(f'batch 1 output:')
+        #     fc_last.output.print()
 
         sum_loss += sum(np.square(mini_batch_train_targets.mat - fc_last.output.mat).flatten() // 2)
         loss_delta_mat = batch_l2_loss_delta(mini_batch_train_targets, fc_last.output)

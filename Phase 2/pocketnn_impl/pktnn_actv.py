@@ -1,6 +1,7 @@
 import numpy as np
 from pktnn_mat import PktMat
 from pktnn_consts import *
+from calc_util import truncate_divide
 
 def pocket_tanh(mat_out: PktMat, mat_in: PktMat, mat_actv_grad_inv: PktMat, k: int, num_items: int):
     assert mat_out.dims_equal(mat_in)
@@ -14,12 +15,12 @@ def pocket_tanh(mat_out: PktMat, mat_in: PktMat, mat_actv_grad_inv: PktMat, k: i
 
     for r in range(mat_out.row):
         for c in range(mat_out.col):
-            x = mat_in[r, c] // divisor
+            x = truncate_divide(mat_in[r, c], divisor)
             if x < joints[0]:
                 mat_out[r, c] = yMin
                 mat_actv_grad_inv[r, c] = slopesInv[0]
             elif x < joints[1]:
-                y = x // 4 - 88
+                y = truncate_divide(x, 4) - 88
                 mat_out[r, c] = y
                 mat_actv_grad_inv[r, c] = slopesInv[1]
             elif x < joints[2]:
@@ -35,7 +36,7 @@ def pocket_tanh(mat_out: PktMat, mat_in: PktMat, mat_actv_grad_inv: PktMat, k: i
                 mat_out[r, c] = y
                 mat_actv_grad_inv[r, c] = slopesInv[4]
             elif x < joints[5]:
-                y = x // 4 + 88
+                y = truncate_divide(x, 4) + 88
                 mat_out[r, c] = y
                 mat_actv_grad_inv[r, c] = slopesInv[5]
             else:

@@ -1,13 +1,13 @@
 import numpy as np
+from calc_util import truncate_divide
+
+np.random.seed(12345)
 
 
-def truncate_divide(a, b):
-    """
-    Truncate division of a by b, which agrees with C++.
-    np.divide gives fp with 3/2.
-    // operator in Python is floor division, so -5 // 2 = -3 while in C++ -5 / 2 = -2.
-    """
-    return np.int_(a / b)
+def rand_range(lower: int, upper: int):
+    r = np.random.randint(256 ** 4, dtype='<u4', size=1)[0]
+    return (r % (upper - lower + 1)) + lower
+
 
 def mat_mul_mat(a, b):
     result = PktMat(a.row, b.col)
@@ -123,10 +123,27 @@ class PktMat:
         self.mat = mat_elem_mul_mat(other, temp).mat
 
     def set_random(self, allow_zero: bool, min_val: int, max_val: int):
-        self.mat = np.full((self.row, self.col), 5, dtype=np.int64)
         # self.mat = np.random.randint(min_val, max_val, size=(self.row, self.col), dtype=np.int64)
         # if not allow_zero:
         #     self.mat += (self.mat == 0)
+
+        # to ensure reproducibility which agrees with C++:
+        for r in range(self.row):
+            for c in range(self.col):
+                self.mat[r][c] = rand_range(min_val, max_val)
+                if not allow_zero:
+                    while self.mat[r][c] == 0:
+                        self.mat[r][c] = rand_range(min_val, max_val)
+
+    def hash(self):
+        def simple_hash(string):
+            hash = 5381  # Starting with a large prime number as a seed
+            for c in string:
+                hash = (((hash << 5) + hash) + ord(c)) % 1000000007  # hash * 33 + ord(c)
+            return hash % 1000000007  # Use a large prime number to wrap around
+
+        matrix_str = ''.join([''.join([str(item) for item in row]) for row in self.mat])
+        return simple_hash(matrix_str)
 
     def sum(self):
         return np.sum(self.mat)
@@ -136,7 +153,6 @@ class PktMat:
             for j in range(self.col):
                 print(self.mat[i][j], end='\t')
             print()
-
 
 
 if __name__ == '__main__':

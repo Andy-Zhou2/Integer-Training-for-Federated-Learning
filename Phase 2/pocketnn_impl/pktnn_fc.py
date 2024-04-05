@@ -48,14 +48,15 @@ class PktFc(PktLayer):
 
     def forward(self, x):
         self.input = x
-        # if isinstance(x, PktLayer):
-        #     assert self.next_layer is not x
-        #     return self.forward(x.get_output_for_fc())
 
         inter = mat_mul_mat(x, self.weight)
+        print(f'inter: {inter.sum()} {inter.hash()}')
 
         inter.self_add_mat(self.bias)
+        print(f'inter2: {inter.sum()} {inter.hash()}')
         activate(self.output, inter, self.actv_grad_inv, self.activation, K_BIT, self.in_dim)  # sets self.output
+
+        print(f'forward, output: {self.output.sum()}, actv_grad_inv: {self.actv_grad_inv.sum()}')
 
         if self.next_layer is not None:
             self.next_layer.forward(self.output)
