@@ -44,7 +44,7 @@ def pocket_tanh(mat_out: PktMat, mat_in: PktMat, mat_actv_grad_inv: PktMat, k: i
     return mat_out, mat_actv_grad_inv
 
 def activate(mat_out: PktMat, mat_in: PktMat, mat_actv_grad_inv: PktMat, actv, k: int, num_items: int):
-    """Set mat_out according to chosen activation"""
+    """Set mat_out and mat_actv_grad_inv according to chosen activation"""
     if not mat_out.dims_equal(mat_in):
         mat_out.init_zeros(mat_in.row, mat_in.col)
 

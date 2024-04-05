@@ -4,35 +4,34 @@ from pktnn_fc import PktFc
 from pktnn_mat import PktMat
 from pktnn_consts import UNSIGNED_4BIT_MAX
 from pktnn_loss import batch_l2_loss_delta
+from state import save_state, load_state
+import os
 
 print('Loading data')
-transform = transforms.Compose([
-    transforms.ToTensor(),
-])
 
 dataset_name = 'mnist'  # mnist or fashion_mnist
 assert dataset_name in ['mnist', 'fashion_mnist']
 
 if dataset_name == 'mnist':
     dataset_train = datasets.MNIST('../data', train=True,
-                                   transform=transform, download=True)
+                                   download=True)
     dataset_test = datasets.MNIST('../data', train=False,
-                                  transform=transform, download=True)
+                                  download=True)
 elif dataset_name == 'fashion_mnist':
     dataset_train = datasets.FashionMNIST('../data', train=True,
-                                          transform=transform, download=True)
+                                          download=True)
     dataset_test = datasets.FashionMNIST('../data', train=False,
-                                         transform=transform, download=True)
+                                         download=True)
 else:  # should not reach here
     raise ValueError('Invalid dataset name')
+
+# create folder
+os.makedirs('../data/weights', exist_ok=True)
 
 num_train_samples = len(dataset_train)
 num_test_samples = len(dataset_test)
 
 print('Transforming data')
-dataset_train = [((data * 256).numpy().astype(np.int_), answer) for data, answer in dataset_train]
-dataset_test = [((data * 256).numpy().astype(np.int_), answer) for data, answer in dataset_test]
-
 num_classes = 10
 mnist_rows = 28
 mnist_cols = 28
@@ -43,12 +42,11 @@ mnist_train_labels = PktMat(num_train_samples, 1)
 mnist_train_images = PktMat(num_train_samples, dim_input)
 mnist_test_labels = PktMat(num_test_samples, 1)
 mnist_test_images = PktMat(num_test_samples, dim_input)
-for i in range(num_train_samples):
-    mnist_train_labels[i][0] = dataset_train[i][1]
-    mnist_train_images[i] = dataset_train[i][0].flatten()
-for i in range(num_test_samples):
-    mnist_test_labels[i][0] = dataset_test[i][1]
-    mnist_test_images[i] = dataset_test[i][0].flatten()
+
+mnist_train_labels.mat = dataset_train.test_labels.numpy().reshape(-1, 1)
+mnist_train_images.mat = dataset_train.test_data.numpy().reshape(-1, dim_input)
+mnist_test_labels.mat = dataset_test.test_labels.numpy().reshape(-1, 1)
+mnist_test_images.mat = dataset_test.test_data.numpy().reshape(-1, dim_input)
 
 print('Creating model')
 if dataset_name == 'mnist':
@@ -100,13 +98,12 @@ for r in range(num_test_samples):
 # test_target_mat = PktMat(num_test_samples, num_classes)
 # num_correct = 0
 # for r in range(num_test_samples):
-    # if test_target_mat.get_max_index_in_row(r) == fc_last.output.get_max_index_in_row(r):
-    #     num_correct += 1
+# if test_target_mat.get_max_index_in_row(r) == fc_last.output.get_max_index_in_row(r):
+#     num_correct += 1
 # print(f"Initial testing accuracy: {num_correct / num_test_samples * 100}%")
 
-loss_delta_mat = PktMat()
 
-EPOCH = 100
+EPOCH = 1
 BATCH_SIZE = 20  # too big could cause overflow
 
 lr_inv = np.int_(1000)
@@ -115,10 +112,11 @@ indices = np.arange(num_train_samples)
 
 print('Start training')
 
-for epoch in range(EPOCH):
+for epoch in range(1, EPOCH + 1):
     print(f'Epoch {epoch}')
     # shuffle indices
-    np.random.shuffle(indices)
+    # TODO: shuffle indices
+    # np.random.shuffle(indices)
 
     if epoch % 10 == 0 and lr_inv < 2 * lr_inv:
         # avoid overflow
@@ -128,7 +126,9 @@ for epoch in range(EPOCH):
     epoch_num_correct = 0
     num_iter = num_train_samples // BATCH_SIZE
 
-    for i in range(num_iter):
+    for i in range(10):  # TODO: num_iter
+        print('\n')
+        print('iter:', i)
         mini_batch_images = PktMat(BATCH_SIZE, dim_input)
         mini_batch_train_targets = PktMat(BATCH_SIZE, num_classes)
 
@@ -137,10 +137,18 @@ for epoch in range(EPOCH):
         mini_batch_images[0:BATCH_SIZE] = mnist_train_images[indices[idx_start:idx_end]]
         mini_batch_train_targets[0:BATCH_SIZE] = train_target_mat[indices[idx_start:idx_end]]
 
+        print('mini_batch_images:', mini_batch_images.sum())
         fc1.forward(mini_batch_images)
 
-        sum_loss += sum(1 / 2 * np.square(mini_batch_train_targets.mat - fc_last.output.mat).flatten())
-        sum_loss_delta = batch_l2_loss_delta(loss_delta_mat, mini_batch_train_targets, fc_last.output)
+        if i == 0:
+            # print output
+            print(f'target:')
+            mini_batch_train_targets.print()
+            print(f'batch 1 output:')
+            fc_last.output.print()
+
+        sum_loss += sum(np.square(mini_batch_train_targets.mat - fc_last.output.mat).flatten() // 2)
+        loss_delta_mat = batch_l2_loss_delta(mini_batch_train_targets, fc_last.output)
 
         for r in range(BATCH_SIZE):
             if mini_batch_train_targets.get_max_index_in_row(r) == fc_last.output.get_max_index_in_row(r):
@@ -151,9 +159,14 @@ for epoch in range(EPOCH):
 
         fc_last.backward(loss_delta_mat, lr_inv)
 
-    params = [fc1.weight.mat, fc1.bias.mat, fc2.weight.mat, fc2.bias.mat, fc_last.weight.mat, fc_last.bias.mat]
-    print(f'epoch {epoch}: has param sum {sum([np.sum(p) for p in params])}')
+        params = [fc1.weight.mat, fc1.bias.mat, fc2.weight.mat, fc2.bias.mat, fc_last.weight.mat, fc_last.bias.mat]
+        print(f'epoch {epoch} iter {i}: has param sum {sum([np.sum(p) for p in params])}')
+        print(f'fc1 sum: {np.sum(fc1.weight.mat)} {np.sum(fc1.bias.mat)}')
+        print(f'fc2 sum: {np.sum(fc2.weight.mat)} {np.sum(fc2.bias.mat)}')
+        print(f'fc_last sum: {np.sum(fc_last.weight.mat)} {np.sum(fc_last.bias.mat)}')
 
+    # save state
+    save_state([fc1, fc2, fc_last], f'../data/weights/epoch_{epoch}.npz')
 
     print(
         f'Epoch {epoch}, loss: {sum_loss}, accuracy: {epoch_num_correct / num_train_samples * 100}%')

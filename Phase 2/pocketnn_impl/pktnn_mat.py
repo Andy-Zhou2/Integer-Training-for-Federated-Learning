@@ -1,6 +1,14 @@
 import numpy as np
 
 
+def truncate_divide(a, b):
+    """
+    Truncate division of a by b, which agrees with C++.
+    np.divide gives fp with 3/2.
+    // operator in Python is floor division, so -5 // 2 = -3 while in C++ -5 / 2 = -2.
+    """
+    return np.int_(a / b)
+
 def mat_mul_mat(a, b):
     result = PktMat(a.row, b.col)
     result.mat = np.matmul(a.mat, b.mat)
@@ -21,13 +29,13 @@ def transpose_of(other):
 
 def mat_div_const(a, const):
     result = PktMat(a.row, a.col)
-    result.mat = a.mat // const
+    result.mat = truncate_divide(a.mat, const)
     return result
 
 
 def mat_elem_div_mat(a: 'PktMat', b: 'PktMat'):
     result = PktMat(a.row, a.col)
-    result.mat = a.mat // b.mat
+    result.mat = truncate_divide(a.mat, b.mat)
     return result
 
 
@@ -95,7 +103,7 @@ class PktMat:
         return self.row == other.row and self.col == other.col
 
     def self_div_const(self, const):
-        self.mat = self.mat // const
+        self.mat = truncate_divide(self.mat, const)
 
     def reset_all(self, row, col, value):
         self.init_zeros(row, col)
@@ -105,7 +113,7 @@ class PktMat:
         self.mat = np.clip(self.mat, min_val, max_val)
 
     def self_elem_div_mat(self, b: 'PktMat'):
-        self.mat = self.mat // b.mat
+        self.mat = truncate_divide(self.mat, b.mat)
 
     def self_mul_const(self, const: int):
         self.mat = np.multiply(self.mat, const)
@@ -115,9 +123,20 @@ class PktMat:
         self.mat = mat_elem_mul_mat(other, temp).mat
 
     def set_random(self, allow_zero: bool, min_val: int, max_val: int):
-        self.mat = np.random.randint(min_val, max_val, size=(self.row, self.col), dtype=np.int64)
-        if not allow_zero:
-            self.mat += (self.mat == 0)
+        self.mat = np.full((self.row, self.col), 5, dtype=np.int64)
+        # self.mat = np.random.randint(min_val, max_val, size=(self.row, self.col), dtype=np.int64)
+        # if not allow_zero:
+        #     self.mat += (self.mat == 0)
+
+    def sum(self):
+        return np.sum(self.mat)
+
+    def print(self):
+        for i in range(self.row):
+            for j in range(self.col):
+                print(self.mat[i][j], end='\t')
+            print()
+
 
 
 if __name__ == '__main__':
