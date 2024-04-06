@@ -50,8 +50,7 @@ class PktFc(PktLayer):
 
         inter = mat_mul_mat(x, self.weight)
         inter.self_add_mat(self.bias)
-        activate(self.output, inter, self.actv_grad_inv, self.activation, K_BIT, self.in_dim)
-        # activate() sets self.output and actv_grad_inv
+        self.output, self.actv_grad_inv = activate(inter, self.activation, K_BIT, self.in_dim)
 
         if self.next_layer is not None:
             self.next_layer.forward(self.output)

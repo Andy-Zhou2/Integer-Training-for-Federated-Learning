@@ -1,11 +1,15 @@
 from pktnn_mat import PktMat
 from pktnn_consts import *
 from calc_util import truncate_divide
+from typing import Tuple
 
-def pocket_tanh(mat_out: PktMat, mat_in: PktMat, mat_actv_grad_inv: PktMat, k: int, num_items: int):
-    assert mat_out.dims_equal(mat_in)
-    if not mat_actv_grad_inv.dims_equal(mat_in):
-        mat_actv_grad_inv.init_zeros(mat_in.row, mat_in.col)
+
+def pocket_tanh(mat_in: PktMat, k: int, num_items: int) -> Tuple[PktMat, PktMat]:
+    mat_out: PktMat = PktMat(mat_in.row, mat_in.col)
+    mat_actv_grad_inv: PktMat = PktMat(mat_in.row, mat_in.col)
+    # assert mat_out.dims_equal(mat_in)
+    # if not mat_actv_grad_inv.dims_equal(mat_in):
+    #     mat_actv_grad_inv.init_zeros(mat_in.row, mat_in.col)
     yMax = PKT_MAX
     yMin = PKT_MIN
     joints = [-127, -74, -31, 32, 75, 128]
@@ -43,10 +47,8 @@ def pocket_tanh(mat_out: PktMat, mat_in: PktMat, mat_actv_grad_inv: PktMat, k: i
                 mat_actv_grad_inv[r, c] = slopesInv[6]
     return mat_out, mat_actv_grad_inv
 
-def activate(mat_out: PktMat, mat_in: PktMat, mat_actv_grad_inv: PktMat, actv, k: int, num_items: int):
-    """Set mat_out and mat_actv_grad_inv according to chosen activation"""
-    if not mat_out.dims_equal(mat_in):
-        mat_out.init_zeros(mat_in.row, mat_in.col)
 
+def activate(mat_in: PktMat, actv, k: int, num_items: int) -> Tuple[PktMat, PktMat]:
+    """Returns the activated matrix and the inverse of the gradient of the activation function."""
     if actv == 'pocket_tanh':
-        return pocket_tanh(mat_out, mat_in, mat_actv_grad_inv, k, num_items)
+        return pocket_tanh(mat_in, k, num_items)

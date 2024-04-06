@@ -1,11 +1,33 @@
+from abc import abstractmethod
+
 import numpy as np
 from torchvision import datasets, transforms
 from pktnn_fc import PktFc
 from pktnn_mat import PktMat
-from pktnn_consts import UNSIGNED_4BIT_MAX
-from pktnn_loss import batch_l2_loss_delta
+from state import save_state, load_state
+import os
 
-class MNISTNet:
+
+class PktNet:
+    @abstractmethod
+    def forward(self, x: PktMat) -> PktMat:
+        """Given input x, return the output of the network."""
+        pass
+
+    @abstractmethod
+    def backward(self, loss_delta_mat: PktMat, lr_inv: np.int_):
+        pass
+
+    @abstractmethod
+    def save(self, path: str):
+        pass
+
+    @abstractmethod
+    def load(self, path: str):
+        pass
+
+
+class MNISTNet(PktNet):
     def __init__(self):
         num_classes = 10
         mnist_rows = 28
@@ -28,8 +50,21 @@ class MNISTNet:
         self.fc2 = fc2
         self.fc_last = fc_last
 
+    def forward(self, x: PktMat) -> PktMat:
+        self.fc1.forward(x)
+        return self.fc_last.output
 
-class FashionMNISTNet:
+    def backward(self, loss_delta_mat: PktMat, lr_inv: np.int_):
+        self.fc_last.backward(loss_delta_mat, lr_inv)
+
+    def save(self, filename: str):
+        save_state([self.fc1, self.fc2, self.fc_last], filename)
+
+    def load(self, filename: str):
+        load_state([self.fc1, self.fc2, self.fc_last], filename)
+
+
+class FashionMNISTNet(PktNet):
     def __init__(self):
         num_classes = 10
         mnist_rows = 28
@@ -55,3 +90,16 @@ class FashionMNISTNet:
         self.fc2 = fc2
         self.fc3 = fc3
         self.fc_last = fc_last
+
+    def forward(self, x: PktMat) -> PktMat:
+        self.fc1.forward(x)
+        return self.fc_last.output
+
+    def backward(self, loss_delta_mat: PktMat, lr_inv: np.int_):
+        self.fc_last.backward(loss_delta_mat, lr_inv)
+
+    def save(self, filename: str):
+        save_state([self.fc1, self.fc2, self.fc3, self.fc_last], filename)
+
+    def load(self, filename: str):
+        load_state([self.fc1, self.fc2, self.fc3, self.fc_last], filename)

@@ -6,6 +6,8 @@ from pktnn_consts import UNSIGNED_4BIT_MAX
 from pktnn_loss import batch_l2_loss_delta
 from state import save_state, load_state
 import os
+from network import MNISTNet, FashionMNISTNet
+from train import pktnn_train, pktnn_evaluate
 
 print('Loading data')
 
@@ -33,143 +35,39 @@ num_train_samples = len(dataset_train)
 num_test_samples = len(dataset_test)
 
 print('Transforming data')
-num_classes = 10
-mnist_rows = 28
-mnist_cols = 28
 
-dim_input = mnist_rows * mnist_cols
+train_images = dataset_train.data.numpy().reshape(-1, 28 * 28)
+train_labels = dataset_train.targets.numpy()
+test_images = dataset_test.data.numpy().reshape(-1, 28 * 28)
+test_labels = dataset_test.targets.numpy()
 
-mnist_train_labels = PktMat(num_train_samples, 1)
-mnist_train_images = PktMat(num_train_samples, dim_input)
-mnist_test_labels = PktMat(num_test_samples, 1)
-mnist_test_images = PktMat(num_test_samples, dim_input)
+train_data = (train_images, train_labels)
+test_data = (test_images, test_labels)
 
-mnist_train_labels.mat = dataset_train.targets.numpy().reshape(-1, 1)
-mnist_train_images.mat = dataset_train.data.numpy().reshape(-1, dim_input)
-mnist_test_labels.mat = dataset_test.targets.numpy().reshape(-1, 1)
-mnist_test_images.mat = dataset_test.data.numpy().reshape(-1, dim_input)
 
 print('Creating model')
 if dataset_name == 'mnist':
-    fc_dim1 = 100
-    fc_dim2 = 50
-    activation = 'pocket_tanh'
-
-    fc1 = PktFc(dim_input, fc_dim1, use_dfa=True, activation=activation)
-    fc2 = PktFc(fc_dim1, fc_dim2, use_dfa=True, activation=activation)
-    fc_last = PktFc(fc_dim2, num_classes, use_dfa=True, activation=activation)
-
-    fc1.set_next_layer(fc2)
-    fc2.set_next_layer(fc_last)
-
-    fc_list = [fc1, fc2, fc_last]
+    net = MNISTNet()
 elif dataset_name == 'fashion_mnist':
-    fc_dim1 = 200
-    fc_dim2 = 100
-    fc_dim3 = 50
-    activation = 'pocket_tanh'
-
-    fc1 = PktFc(dim_input, fc_dim1, use_dfa=True, activation=activation)
-    fc2 = PktFc(fc_dim1, fc_dim2, use_dfa=True, activation=activation)
-    fc3 = PktFc(fc_dim2, fc_dim3, use_dfa=True, activation=activation)
-    fc_last = PktFc(fc_dim3, num_classes, use_dfa=True, activation=activation)
-
-    fc1.set_next_layer(fc2)
-    fc2.set_next_layer(fc3)
-    fc3.set_next_layer(fc_last)
-
-    fc_list = [fc1, fc2, fc3, fc_last]
+    net = FashionMNISTNet()
 else:  # should not reach here
     raise ValueError('Invalid dataset name')
 
-print('Setting target matrix')
-train_target_mat = PktMat(num_train_samples, num_classes)
-for r in range(num_train_samples):
-    train_target_mat[r][mnist_train_labels[r][0]] = UNSIGNED_4BIT_MAX
+# initial testing
+print('Initial testing')
+acc = pktnn_evaluate(net, test_data)
+print(f'Initial testing accuracy: {acc * 100}%')
 
-test_target_mat = PktMat(num_test_samples, num_classes)
-for r in range(num_test_samples):
-    test_target_mat[r][mnist_test_labels[r][0]] = UNSIGNED_4BIT_MAX
+config = {
+    'epochs': 100,
+    'batch_size': 20,
+    'initial_lr_inv': 1000,
+    'weight_folder': weight_folder,
+    'test_every_epoch': True
+}
+pkt_data = {
+    'train': train_data,
+    'test': test_data
+}
+pktnn_train(net, pkt_data, config)
 
-# print('Initial Testing')
-# fc1.forward(mnist_train_images)
-# num_correct = 0
-# for r in range(num_train_samples):
-#     if train_target_mat.get_max_index_in_row(r) == fc_last.output.get_max_index_in_row(r):
-#         num_correct += 1
-# print(f"Initial training accuracy: {num_correct}, {num_train_samples}, {num_correct / num_train_samples * 100}%")
-#
-# fc1.forward(mnist_test_images)
-# test_target_mat = PktMat(num_test_samples, num_classes)
-# num_correct = 0
-# for r in range(num_test_samples):
-# if test_target_mat.get_max_index_in_row(r) == fc_last.output.get_max_index_in_row(r):
-#     num_correct += 1
-# print(f"Initial testing accuracy: {num_correct / num_test_samples * 100}%")
-
-
-EPOCH = 100
-BATCH_SIZE = 20  # too big could cause overflow
-
-lr_inv = np.int_(1000)
-
-# load state
-START_EPOCH = 1
-# load_state(fc_list, os.path.join(weight_folder, f'epoch_{START_EPOCH-1}.npz'))
-# lr_inv = np.int_(2000)
-
-indices = np.arange(num_train_samples)
-
-print('Start training')
-
-for epoch in range(START_EPOCH, EPOCH + 1):
-    print(f'Epoch {epoch}')
-    # shuffle indices
-    np.random.shuffle(indices)
-
-    if epoch % 10 == 0 and lr_inv < 2 * lr_inv:
-        # avoid overflow
-        lr_inv *= 2
-
-    sum_loss = 0
-    epoch_num_correct = 0
-    num_iter = num_train_samples // BATCH_SIZE
-
-    for i in range(num_iter):
-        mini_batch_images = PktMat(BATCH_SIZE, dim_input)
-        mini_batch_train_targets = PktMat(BATCH_SIZE, num_classes)
-
-        idx_start = i * BATCH_SIZE
-        idx_end = idx_start + BATCH_SIZE
-        mini_batch_images[0:BATCH_SIZE] = mnist_train_images[indices[idx_start:idx_end]]
-        mini_batch_train_targets[0:BATCH_SIZE] = train_target_mat[indices[idx_start:idx_end]]
-
-        fc1.forward(mini_batch_images)
-
-        sum_loss += sum(np.square(mini_batch_train_targets.mat - fc_last.output.mat).flatten() // 2)
-        loss_delta_mat = batch_l2_loss_delta(mini_batch_train_targets, fc_last.output)
-
-        for r in range(BATCH_SIZE):
-            if mini_batch_train_targets.get_max_index_in_row(r) == fc_last.output.get_max_index_in_row(r):
-                epoch_num_correct += 1
-
-        fc_last.backward(loss_delta_mat, lr_inv)
-
-    params_sum = sum([fc.weight.sum() + fc.bias.sum() for fc in fc_list])
-    print(f'epoch {epoch} iter {None}: has param sum {params_sum}')
-    for fc in fc_list:
-        print(f'fc hash: {fc.weight.hash()} {fc.bias.hash()}')
-
-    # save state
-    save_state(fc_list, os.path.join(weight_folder, f'epoch_{epoch}.npz'))
-
-    print(
-        f'Epoch {epoch}, loss: {sum_loss}, accuracy: {epoch_num_correct / num_train_samples * 100}%')
-
-    # test on test set
-    fc1.forward(mnist_test_images)
-    num_correct = 0
-    for r in range(num_test_samples):
-        if test_target_mat.get_max_index_in_row(r) == fc_last.output.get_max_index_in_row(r):
-            num_correct += 1
-    print(f"Testing accuracy: {num_correct / num_test_samples * 100}%")
