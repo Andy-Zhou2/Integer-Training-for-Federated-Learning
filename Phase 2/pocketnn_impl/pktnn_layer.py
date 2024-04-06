@@ -1,4 +1,3 @@
-from enum import Enum
 from pktnn_mat import PktMat
 
 

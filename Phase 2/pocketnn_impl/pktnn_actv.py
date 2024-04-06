@@ -1,4 +1,3 @@
-import numpy as np
 from pktnn_mat import PktMat
 from pktnn_consts import *
 from calc_util import truncate_divide

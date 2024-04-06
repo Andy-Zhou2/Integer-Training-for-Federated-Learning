@@ -50,13 +50,13 @@ class PktFc(PktLayer):
         self.input = x
 
         inter = mat_mul_mat(x, self.weight)
-        print(f'inter: {inter.sum()} {inter.hash()}')
+        # print(f'inter: {inter.sum()} {inter.hash()}')
 
         inter.self_add_mat(self.bias)
-        print(f'inter2: {inter.sum()} {inter.hash()}')
+        # print(f'inter2: {inter.sum()} {inter.hash()}')
         activate(self.output, inter, self.actv_grad_inv, self.activation, K_BIT, self.in_dim)  # sets self.output
 
-        print(f'forward, output: {self.output.sum()}, actv_grad_inv: {self.actv_grad_inv.sum()}')
+        # print(f'forward, output: {self.output.sum()}, actv_grad_inv: {self.actv_grad_inv.sum()}')
 
         if self.next_layer is not None:
             self.next_layer.forward(self.output)
@@ -81,7 +81,7 @@ class PktFc(PktLayer):
             deltas = mat_mul_mat(final_layer_delta_mat, self.dfa_weight)
             deltas.self_elem_div_mat(self.actv_grad_inv)
 
-        print(f'final_layer_delta_mat: {final_layer_delta_mat.sum()}, self.actv_grad_inv: {self.actv_grad_inv.sum()}, self.dfa_weight: {self.dfa_weight.sum()}, deltas: {deltas.sum()}')
+        # print(f'final_layer_delta_mat: {final_layer_delta_mat.sum()}, self.actv_grad_inv: {self.actv_grad_inv.sum()}, self.dfa_weight: {self.dfa_weight.sum()}, deltas: {deltas.sum()}')
         # print('final_layer_delta_mat:')
         # final_layer_delta_mat.print()
         # print('self.actv_grad_inv:')
@@ -95,7 +95,7 @@ class PktFc(PktLayer):
 
     def backward(self, final_layer_delta_mat, lr_inv):
         deltas = self.compute_deltas(final_layer_delta_mat)
-        print('deltas:', deltas.sum())
+        # print('deltas:', deltas.sum())
         # deltas.print()
 
         batch_size = deltas.row
@@ -104,29 +104,29 @@ class PktFc(PktLayer):
             prev_output_transpose = transpose_of(self.input)
         else:
             prev_output_transpose = transpose_of(self.prev_layer.get_output_for_fc())
-        print('prev_output_transpose:', prev_output_transpose.sum())
+        # print('prev_output_transpose:', prev_output_transpose.sum())
         # prev_output_transpose.print()
 
         # Update weights
         weight_update = mat_mul_mat(prev_output_transpose, deltas)
-        print('weight_update:', weight_update.sum())
+        # print('weight_update:', weight_update.sum())
         weight_update.self_div_const(-lr_inv)
-        print('weight_update2:', weight_update.sum())
+        # print('weight_update2:', weight_update.sum())
         self.weight.self_add_mat(weight_update)
-        print('weight:', self.weight.sum())
+        # print('weight:', self.weight.sum())
 
         # Update bias
         assert not self.use_bn
         all_one_mat = PktMat.fill(row=1, col=batch_size, value=1)
         bias_update = mat_mul_mat(all_one_mat, deltas)
-        print('bias_update:', bias_update.sum())
+        # print('bias_update:', bias_update.sum())
         bias_update.self_div_const(-lr_inv)
-        print('bias_update2:', bias_update.sum())
+        # print('bias_update2:', bias_update.sum())
         self.bias.self_add_mat(bias_update)
-        print('bias:', self.bias.sum())
+        # print('bias:', self.bias.sum())
 
-        self.weight.clamp_mat(SHRT_MIN, SHRT_MAX)
-        self.bias.clamp_mat(SHRT_MIN, SHRT_MAX)
+        self.weight.clamp_mat(SHRT_MIN + 1, SHRT_MAX)
+        self.bias.clamp_mat(SHRT_MIN + 1, SHRT_MAX)
 
         if self.prev_layer is not None:
             self.prev_layer.backward(final_layer_delta_mat, lr_inv)

@@ -9,7 +9,7 @@ import os
 
 print('Loading data')
 
-dataset_name = 'mnist'  # mnist or fashion_mnist
+dataset_name = 'fashion_mnist'  # mnist or fashion_mnist
 assert dataset_name in ['mnist', 'fashion_mnist']
 
 if dataset_name == 'mnist':
@@ -26,7 +26,8 @@ else:  # should not reach here
     raise ValueError('Invalid dataset name')
 
 # create folder
-os.makedirs('../data/weights', exist_ok=True)
+weight_folder = f'../data/weights/{dataset_name}'
+os.makedirs(weight_folder, exist_ok=True)
 
 num_train_samples = len(dataset_train)
 num_test_samples = len(dataset_test)
@@ -60,6 +61,8 @@ if dataset_name == 'mnist':
 
     fc1.set_next_layer(fc2)
     fc2.set_next_layer(fc_last)
+
+    fc_list = [fc1, fc2, fc_last]
 elif dataset_name == 'fashion_mnist':
     fc_dim1 = 200
     fc_dim2 = 100
@@ -74,6 +77,8 @@ elif dataset_name == 'fashion_mnist':
     fc1.set_next_layer(fc2)
     fc2.set_next_layer(fc3)
     fc3.set_next_layer(fc_last)
+
+    fc_list = [fc1, fc2, fc3, fc_last]
 else:  # should not reach here
     raise ValueError('Invalid dataset name')
 
@@ -103,20 +108,29 @@ for r in range(num_test_samples):
 # print(f"Initial testing accuracy: {num_correct / num_test_samples * 100}%")
 
 
-EPOCH = 1
+
+EPOCH = 100
 BATCH_SIZE = 20  # too big could cause overflow
 
 lr_inv = np.int_(1000)
+
+# load state
+START_EPOCH = 10
+load_state(fc_list, os.path.join(weight_folder, f'epoch_{START_EPOCH}.npz'))
+lr_inv = np.int_(2000)
 
 indices = np.arange(num_train_samples)
 
 print('Start training')
 
-for epoch in range(1, EPOCH + 1):
+for epoch in range(START_EPOCH + 1, EPOCH + 1):
     print(f'Epoch {epoch}')
     # shuffle indices
     # TODO: shuffle indices
     # np.random.shuffle(indices)
+
+    if epoch > 10:
+        print('DEBUG')
 
     if epoch % 10 == 0 and lr_inv < 2 * lr_inv:
         # avoid overflow
@@ -126,9 +140,20 @@ for epoch in range(1, EPOCH + 1):
     epoch_num_correct = 0
     num_iter = num_train_samples // BATCH_SIZE
 
-    for i in range(100):  # TODO: num_iter
-        print('\n')
+    for i in range(num_iter):
+        # print('\n')
         print('iter:', i)
+
+        if (epoch == 11 and i >= 1138) or (i==0):
+            params_sum = sum([fc.weight.sum() + fc.bias.sum() for fc in fc_list])
+            print(f'epoch {epoch} iter {i}: has param sum {params_sum}')
+            for fc in fc_list:
+                print(f'fc hash: {fc.weight.hash()} {fc.bias.hash()}')
+
+        if i >= 1600:
+            import sys
+            sys.exit(0)
+
         mini_batch_images = PktMat(BATCH_SIZE, dim_input)
         mini_batch_train_targets = PktMat(BATCH_SIZE, num_classes)
 
@@ -137,7 +162,7 @@ for epoch in range(1, EPOCH + 1):
         mini_batch_images[0:BATCH_SIZE] = mnist_train_images[indices[idx_start:idx_end]]
         mini_batch_train_targets[0:BATCH_SIZE] = train_target_mat[indices[idx_start:idx_end]]
 
-        print('mini_batch_images:', mini_batch_images.sum())
+        # print('mini_batch_images:', mini_batch_images.sum())
         fc1.forward(mini_batch_images)
 
         # if i == 0:
@@ -159,14 +184,8 @@ for epoch in range(1, EPOCH + 1):
 
         fc_last.backward(loss_delta_mat, lr_inv)
 
-        params = [fc1.weight.mat, fc1.bias.mat, fc2.weight.mat, fc2.bias.mat, fc_last.weight.mat, fc_last.bias.mat]
-        print(f'epoch {epoch} iter {i}: has param sum {sum([np.sum(p) for p in params])}')
-        print(f'fc1 sum: {np.sum(fc1.weight.mat)} {np.sum(fc1.bias.mat)}')
-        print(f'fc2 sum: {np.sum(fc2.weight.mat)} {np.sum(fc2.bias.mat)}')
-        print(f'fc_last sum: {np.sum(fc_last.weight.mat)} {np.sum(fc_last.bias.mat)}')
-
     # save state
-    save_state([fc1, fc2, fc_last], f'../data/weights/epoch_{epoch}.npz')
+    save_state(fc_list, os.path.join(weight_folder, f'epoch_{epoch}.npz'))
 
     print(
         f'Epoch {epoch}, loss: {sum_loss}, accuracy: {epoch_num_correct / num_train_samples * 100}%')
