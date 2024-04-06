@@ -115,15 +115,15 @@ BATCH_SIZE = 20  # too big could cause overflow
 lr_inv = np.int_(1000)
 
 # load state
-START_EPOCH = 10
-load_state(fc_list, os.path.join(weight_folder, f'epoch_{START_EPOCH}.npz'))
-lr_inv = np.int_(2000)
+START_EPOCH = 1
+# load_state(fc_list, os.path.join(weight_folder, f'epoch_{START_EPOCH-1}.npz'))
+# lr_inv = np.int_(2000)
 
 indices = np.arange(num_train_samples)
 
 print('Start training')
 
-for epoch in range(START_EPOCH + 1, EPOCH + 1):
+for epoch in range(START_EPOCH, EPOCH + 1):
     print(f'Epoch {epoch}')
     # shuffle indices
     # TODO: shuffle indices
@@ -142,17 +142,7 @@ for epoch in range(START_EPOCH + 1, EPOCH + 1):
 
     for i in range(num_iter):
         # print('\n')
-        print('iter:', i)
-
-        if (epoch == 11 and i >= 1138) or (i==0):
-            params_sum = sum([fc.weight.sum() + fc.bias.sum() for fc in fc_list])
-            print(f'epoch {epoch} iter {i}: has param sum {params_sum}')
-            for fc in fc_list:
-                print(f'fc hash: {fc.weight.hash()} {fc.bias.hash()}')
-
-        if i >= 1600:
-            import sys
-            sys.exit(0)
+        # print('iter:', i)
 
         mini_batch_images = PktMat(BATCH_SIZE, dim_input)
         mini_batch_train_targets = PktMat(BATCH_SIZE, num_classes)
@@ -183,6 +173,12 @@ for epoch in range(START_EPOCH + 1, EPOCH + 1):
         # print(f'epoch {epoch}: has param sum {sum([np.sum(p) for p in params])}')
 
         fc_last.backward(loss_delta_mat, lr_inv)
+
+
+    params_sum = sum([fc.weight.sum() + fc.bias.sum() for fc in fc_list])
+    print(f'epoch {epoch} iter {None}: has param sum {params_sum}')
+    for fc in fc_list:
+        print(f'fc hash: {fc.weight.hash()} {fc.bias.hash()}')
 
     # save state
     save_state(fc_list, os.path.join(weight_folder, f'epoch_{epoch}.npz'))
