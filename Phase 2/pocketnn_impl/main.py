@@ -108,7 +108,6 @@ for r in range(num_test_samples):
 # print(f"Initial testing accuracy: {num_correct / num_test_samples * 100}%")
 
 
-
 EPOCH = 100
 BATCH_SIZE = 20  # too big could cause overflow
 
@@ -126,11 +125,7 @@ print('Start training')
 for epoch in range(START_EPOCH, EPOCH + 1):
     print(f'Epoch {epoch}')
     # shuffle indices
-    # TODO: shuffle indices
-    # np.random.shuffle(indices)
-
-    if epoch > 10:
-        print('DEBUG')
+    np.random.shuffle(indices)
 
     if epoch % 10 == 0 and lr_inv < 2 * lr_inv:
         # avoid overflow
@@ -141,9 +136,6 @@ for epoch in range(START_EPOCH, EPOCH + 1):
     num_iter = num_train_samples // BATCH_SIZE
 
     for i in range(num_iter):
-        # print('\n')
-        # print('iter:', i)
-
         mini_batch_images = PktMat(BATCH_SIZE, dim_input)
         mini_batch_train_targets = PktMat(BATCH_SIZE, num_classes)
 
@@ -152,15 +144,7 @@ for epoch in range(START_EPOCH, EPOCH + 1):
         mini_batch_images[0:BATCH_SIZE] = mnist_train_images[indices[idx_start:idx_end]]
         mini_batch_train_targets[0:BATCH_SIZE] = train_target_mat[indices[idx_start:idx_end]]
 
-        # print('mini_batch_images:', mini_batch_images.sum())
         fc1.forward(mini_batch_images)
-
-        # if i == 0:
-        #     # print output
-        #     print(f'target:')
-        #     mini_batch_train_targets.print()
-        #     print(f'batch 1 output:')
-        #     fc_last.output.print()
 
         sum_loss += sum(np.square(mini_batch_train_targets.mat - fc_last.output.mat).flatten() // 2)
         loss_delta_mat = batch_l2_loss_delta(mini_batch_train_targets, fc_last.output)
@@ -169,11 +153,7 @@ for epoch in range(START_EPOCH, EPOCH + 1):
             if mini_batch_train_targets.get_max_index_in_row(r) == fc_last.output.get_max_index_in_row(r):
                 epoch_num_correct += 1
 
-        # params = [fc1.weight.mat, fc1.bias.mat, fc2.weight.mat, fc2.bias.mat, fc_last.weight.mat, fc_last.bias.mat]
-        # print(f'epoch {epoch}: has param sum {sum([np.sum(p) for p in params])}')
-
         fc_last.backward(loss_delta_mat, lr_inv)
-
 
     params_sum = sum([fc.weight.sum() + fc.bias.sum() for fc in fc_list])
     print(f'epoch {epoch} iter {None}: has param sum {params_sum}')
