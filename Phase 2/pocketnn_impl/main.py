@@ -55,6 +55,8 @@ else:  # should not reach here
 
 # initial testing
 print('Initial testing')
+acc = pktnn_evaluate(net, train_data)
+print(f'Initial training accuracy: {acc * 100}%')
 acc = pktnn_evaluate(net, test_data)
 print(f'Initial testing accuracy: {acc * 100}%')
 
@@ -63,7 +65,8 @@ config = {
     'batch_size': 20,
     'initial_lr_inv': 1000,
     'weight_folder': weight_folder,
-    'test_every_epoch': True
+    'test_every_epoch': True,
+    'print_hash_every_epoch': True
 }
 pkt_data = {
     'train': train_data,

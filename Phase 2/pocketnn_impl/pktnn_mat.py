@@ -127,7 +127,7 @@ class PktMat:
         # if not allow_zero:
         #     self.mat += (self.mat == 0)
 
-        # to ensure reproducibility which agrees with C++:
+        # to ensure reproducibility which agrees with C++: (considering the seeding at the top of the file)
         for r in range(self.row):
             for c in range(self.col):
                 self.mat[r][c] = rand_range(min_val, max_val)

@@ -5,7 +5,7 @@ from torchvision import datasets, transforms
 from pktnn_fc import PktFc
 from pktnn_mat import PktMat
 from state import save_state, load_state
-import os
+from typing import List
 
 
 class PktNet:
@@ -24,6 +24,10 @@ class PktNet:
 
     @abstractmethod
     def load(self, path: str):
+        pass
+
+    @abstractmethod
+    def get_fc_list(self) -> List[PktFc]:
         pass
 
 
@@ -63,6 +67,9 @@ class MNISTNet(PktNet):
     def load(self, filename: str):
         load_state([self.fc1, self.fc2, self.fc_last], filename)
 
+    def get_fc_list(self) -> List[PktFc]:
+        return [self.fc1, self.fc2, self.fc_last]
+
 
 class FashionMNISTNet(PktNet):
     def __init__(self):
@@ -72,8 +79,8 @@ class FashionMNISTNet(PktNet):
 
         dim_input = mnist_rows * mnist_cols
 
-        fc_dim1 = 100
-        fc_dim2 = 50
+        fc_dim1 = 200
+        fc_dim2 = 100
         fc_dim3 = 50
         activation = 'pocket_tanh'
 
@@ -103,3 +110,6 @@ class FashionMNISTNet(PktNet):
 
     def load(self, filename: str):
         load_state([self.fc1, self.fc2, self.fc3, self.fc_last], filename)
+
+    def get_fc_list(self) -> List[PktFc]:
+        return [self.fc1, self.fc2, self.fc3, self.fc_last]

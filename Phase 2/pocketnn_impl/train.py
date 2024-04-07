@@ -29,7 +29,7 @@ def pktnn_train(net: PktNet, data: Dict[str, Tuple[np.ndarray, np.ndarray]], con
     dim_input = mnist_rows * mnist_cols
 
     mnist_train_images = PktMat(num_train_samples, dim_input)
-    mnist_train_images.mat = train_images.reshape(-1, 1)
+    mnist_train_images.mat = train_images.reshape(-1, dim_input)
 
     train_target_mat = PktMat(num_train_samples, num_classes)
     for r in range(num_train_samples):
@@ -76,6 +76,13 @@ def pktnn_train(net: PktNet, data: Dict[str, Tuple[np.ndarray, np.ndarray]], con
 
             net.backward(loss_delta_mat, lr_inv)
 
+        if config['print_hash_every_epoch']:
+            fc_list = net.get_fc_list()
+            params_sum = sum([fc.weight.sum() + fc.bias.sum() for fc in fc_list])
+            print(f'epoch {epoch}: has param sum {params_sum}')
+            for fc in fc_list:
+                print(f'fc hash: {fc.weight.hash()} {fc.bias.hash()}')
+
         # save state
         weight_folder = config.get('weight_folder', '')
         if weight_folder:
@@ -88,7 +95,7 @@ def pktnn_train(net: PktNet, data: Dict[str, Tuple[np.ndarray, np.ndarray]], con
         # test on test set
         if config['test_every_epoch']:
             assert 'test' in data, "Test dataset is required if test_every_epoch is True"
-            test_data = data['train']
+            test_data = data['test']
             acc = pktnn_evaluate(net, test_data)
             print(f"Epoch {epoch}, testing accuracy: {acc * 100}%")
 
@@ -112,7 +119,7 @@ def pktnn_evaluate(net: PktNet, test_data: Tuple[np.ndarray, np.ndarray]) -> flo
     dim_input = mnist_rows * mnist_cols
 
     mnist_test_images = PktMat(num_test_samples, dim_input)
-    mnist_test_images.mat = test_images.reshape(-1, dim_input)
+    mnist_test_images.mat = test_images.reshape(num_test_samples, dim_input)
 
     output = net.forward(mnist_test_images)
     num_correct = 0
