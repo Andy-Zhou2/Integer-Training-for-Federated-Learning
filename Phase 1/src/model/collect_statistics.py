@@ -18,7 +18,7 @@ def main():
                              transform=transform, download=True)
 
     model = MNIST_Net()
-    model.load_state_dict(torch.load("../data/model_ckpt/mnist_cnn.pt"))
+    model.load_state_dict(torch.load("../data/model_ckpt/mnist_cnn.pt", map_location='cpu'))
 
     model.eval()
 

@@ -16,10 +16,10 @@ from strategy import FedAvgInt
 
 num_clients = 5
 dataset_name = 'fashion_mnist'
-num_rounds = 10
+num_rounds = 20
 client_resources = {"num_cpus": 1, "num_gpus": 0.0}
 client_train_config = {
-    'epochs': 2,
+    'epochs': 10,
     'batch_size': 20,
     'initial_lr_inv': 1000,
     'weight_folder': '',  # empty string: don't save
@@ -28,6 +28,7 @@ client_train_config = {
     'shuffle_dataset_every_epoch': False,
     'verbose': False
 }
+train_ratio = 0.8  # proportion of the training set used for training (the rest for validation)
 
 ClientDataset = Dict[str, DatasetTuple]
 
@@ -50,7 +51,7 @@ def load_datasets(dataset_name: str) -> Tuple[List[ClientDataset], DatasetTuple]
 
     # split the training set into NUM_CLIENTS partitions, and each partition into train and validation sets
     size_each_client = len(train_images) // num_clients
-    size_training_each_client = int(size_each_client * 0.8)
+    size_training_each_client = int(size_each_client * train_ratio)
 
     client_dataset = []
     for partition_id in range(num_clients):

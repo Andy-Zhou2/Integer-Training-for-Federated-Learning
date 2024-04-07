@@ -19,13 +19,17 @@ dataset_test = datasets.MNIST('./data', train=False,
 def get_q_params_from_range(min_value: float, max_value: float, bit_width: int):
     """
     Calculates the scale and zero_point of the quantized numbers.
-    First calculate the scale, and re-adjust the scale to ensure max/min values are representable.
+    First calculate the scale based on (max-min)/range.
+    Then, re-adjust the scale to ensure 0 is exactly representable and max/min values are within representable range.
+
     :param min_value: The minimum value observed
     :param max_value: The maximum value observed
     :param bit_width: Bit-width used
     :return: scale and zero_point of the quantized numbers
     """
     assert min_value <= max_value, 'min_value must be less than max_value'
+
+    # must cover 0 in the range
     if min_value > 0:
         min_value = 0
     if max_value < 0:
@@ -41,7 +45,7 @@ def get_q_params_from_range(min_value: float, max_value: float, bit_width: int):
     else:
         scale = max(-min_value / unsigned_zero_point, max_value / (2 ** bit_width - 1 - unsigned_zero_point))
 
-    zero_point = unsigned_zero_point - 2 ** (bit_width - 1)
+    zero_point = unsigned_zero_point - 2 ** (bit_width - 1)  # convert from unsigned to signed
 
     return scale, zero_point
 
