@@ -15,11 +15,11 @@ from train_evaluate import pktnn_train, pktnn_evaluate
 from strategy import FedAvgInt
 
 num_clients = 5
-dataset_name = 'mnist'
+dataset_name = 'fashion_mnist'
 num_rounds = 10
 client_resources = {"num_cpus": 1, "num_gpus": 0.0}
 client_train_config = {
-    'epochs': 10,
+    'epochs': 2,
     'batch_size': 20,
     'initial_lr_inv': 1000,
     'weight_folder': '',  # empty string: don't save
@@ -70,7 +70,7 @@ def load_datasets(dataset_name: str) -> Tuple[List[ClientDataset], DatasetTuple]
     return client_dataset, test_dataset
 
 
-client_datasets, test_dataset = load_datasets('mnist')
+client_datasets, test_dataset = load_datasets(dataset_name)
 
 
 class FlowerClient(fl.client.NumPyClient):
