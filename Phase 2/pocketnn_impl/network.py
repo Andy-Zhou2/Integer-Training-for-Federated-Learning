@@ -30,6 +30,24 @@ class PktNet:
     def get_fc_list(self) -> List[PktFc]:
         pass
 
+    def set_parameters(self, parameters: List[np.ndarray]):
+        """Set the parameters of the network. Used for FL."""
+        fc_list = self.get_fc_list()
+        assert len(parameters) == len(fc_list) * 2, \
+            "Number of parameters should be twice the number of layers (weight & bias)"
+        for i in range(len(fc_list)):
+            fc_list[i].weight.mat = parameters[i * 2]
+            fc_list[i].bias.mat = parameters[i * 2 + 1]
+
+    def get_parameters(self) -> List[np.ndarray]:
+        """Get the parameters of the network. Used for FL."""
+        fc_list = self.get_fc_list()
+        parameters = []
+        for fc in fc_list:
+            parameters.append(fc.weight.mat)
+            parameters.append(fc.bias.mat)
+        return parameters
+
 
 class MNISTNet(PktNet):
     def __init__(self):
@@ -113,3 +131,12 @@ class FashionMNISTNet(PktNet):
 
     def get_fc_list(self) -> List[PktFc]:
         return [self.fc1, self.fc2, self.fc3, self.fc_last]
+
+
+def get_net(dataset_name: str) -> PktNet:
+    if dataset_name == 'mnist':
+        return MNISTNet()
+    elif dataset_name == 'fashion_mnist':
+        return FashionMNISTNet()
+    else:
+        raise ValueError('Invalid dataset name')

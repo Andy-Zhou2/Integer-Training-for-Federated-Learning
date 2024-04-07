@@ -42,11 +42,12 @@ def pktnn_train(net: PktNet, data: Dict[str, Tuple[np.ndarray, np.ndarray]], con
 
     indices = np.arange(num_train_samples)
 
-    print('Start training')
     for epoch in range(1, EPOCH + 1):
-        print(f'Epoch {epoch}')
-        # shuffle indices
-        np.random.shuffle(indices)
+        if config['verbose']:
+            print(f'Epoch {epoch}')
+
+        if config['shuffle_dataset_every_epoch']:
+            np.random.shuffle(indices)
 
         if epoch % 10 == 0 and lr_inv < 2 * lr_inv:
             # avoid overflow
@@ -89,16 +90,14 @@ def pktnn_train(net: PktNet, data: Dict[str, Tuple[np.ndarray, np.ndarray]], con
             os.makedirs(weight_folder, exist_ok=True)
             net.save(os.path.join(weight_folder, f'epoch_{epoch}.npz'))
 
-        print(
-            f'Epoch {epoch}, loss: {sum_loss}, accuracy: {epoch_num_correct / num_train_samples * 100}%')
+        if config['verbose']:
+            print(f'Epoch {epoch}, loss: {sum_loss}, accuracy: {epoch_num_correct / num_train_samples * 100}%')
 
-        # test on test set
         if config['test_every_epoch']:
             assert 'test' in data, "Test dataset is required if test_every_epoch is True"
             test_data = data['test']
             acc = pktnn_evaluate(net, test_data)
             print(f"Epoch {epoch}, testing accuracy: {acc * 100}%")
-
 
 
 def pktnn_evaluate(net: PktNet, test_data: Tuple[np.ndarray, np.ndarray]) -> float:
