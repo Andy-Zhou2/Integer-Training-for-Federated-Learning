@@ -25,7 +25,7 @@ acc = pktnn_evaluate(net, test_data)
 print(f'Initial testing accuracy: {acc * 100}%')
 
 config = {
-    'epochs': 100,
+    'epochs': 1,
     'batch_size': 20,
     'initial_lr_inv': 1000,
     'weight_folder': weight_folder,

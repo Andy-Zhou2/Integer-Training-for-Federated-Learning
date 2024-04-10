@@ -5,6 +5,7 @@ from pktnn_mat import PktMat
 from pktnn_consts import UNSIGNED_4BIT_MAX
 from pktnn_loss import batch_l2_loss_delta
 import os
+import time
 
 
 def pktnn_train(net: PktNet, data: Dict[str, Tuple[np.ndarray, np.ndarray]], config: Dict[str, Any]):

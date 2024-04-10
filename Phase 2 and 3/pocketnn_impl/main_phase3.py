@@ -13,30 +13,17 @@ from network import PktNet
 from flwr.common.typing import NDArrays, NDArrayInt
 from train_evaluate import pktnn_train, pktnn_evaluate
 from strategy import FedAvgInt
-
-num_clients = 5
-dataset_name = 'fashion_mnist'
-num_rounds = 20
-client_resources = {"num_cpus": 1, "num_gpus": 0.0}
-client_train_config = {
-    'epochs': 10,
-    'batch_size': 20,
-    'initial_lr_inv': 1000,
-    'weight_folder': '',  # empty string: don't save
-    'test_every_epoch': False,
-    'print_hash_every_epoch': False,
-    'shuffle_dataset_every_epoch': False,
-    'verbose': False
-}
-train_ratio = 0.8  # proportion of the training set used for training (the rest for validation)
+import wandb
 
 ClientDataset = Dict[str, DatasetTuple]
 
 
-def load_datasets(dataset_name: str) -> Tuple[List[ClientDataset], DatasetTuple]:
+def load_datasets(dataset_name: str, num_clients: int, train_ratio: float) -> Tuple[List[ClientDataset], DatasetTuple]:
     """
     Load the dataset and split the training set into NUM_CLIENTS partitions.
 
+    :param train_ratio: the proportion of the training set used for training (the rest for validation)
+    :param num_clients: the number of clients
     :param dataset_name: the name of the dataset
     :return: a list of client datasets and the test dataset
     """
@@ -71,9 +58,6 @@ def load_datasets(dataset_name: str) -> Tuple[List[ClientDataset], DatasetTuple]
     return client_dataset, test_dataset
 
 
-client_datasets, test_dataset = load_datasets(dataset_name)
-
-
 class FlowerClient(fl.client.NumPyClient):
     def __init__(self, net: PktNet, client_dataset: ClientDataset, cid: str):
         self.net = net
@@ -103,7 +87,7 @@ class FlowerClient(fl.client.NumPyClient):
         return float('NAN'), len_val_data, {"accuracy": accuracy, 'cid': self.cid}
 
 
-def client_fn(cid: str):
+def client_fn(cid: str, dataset_name: str, client_datasets: List[ClientDataset]):
     # Load model
     net = get_net(dataset_name)
     cid_int = int(cid)
@@ -141,7 +125,7 @@ def aggregate_weighted_average(metrics: list[tuple[int, dict]]) -> dict:
     }
 
 
-def _on_fit_config_fn(server_round: int):
+def _on_fit_config_fn(client_train_config: dict, server_round: int):
     return client_train_config | {"server_round": server_round}
 
 
@@ -149,7 +133,8 @@ def _on_evaluate_config_fn(server_round: int):
     return {"server_round": server_round}
 
 
-def federated_evaluation_function(server_round: int, parameters: NDArrays, fed_eval_config):
+def federated_evaluation_function(dataset_name: str, test_dataset: DatasetTuple,
+                                  server_round: int, parameters: NDArrays, fed_eval_config: Dict[str, Any]):
     """returns (loss, dict of results)"""
     net = get_net(dataset_name)
     net.set_parameters(parameters)
@@ -157,23 +142,65 @@ def federated_evaluation_function(server_round: int, parameters: NDArrays, fed_e
     return float('NAN'), {"accuracy": accuracy}
 
 
-strategy = FedAvgInt(
-    fraction_fit=1,
-    fraction_evaluate=1,
-    min_fit_clients=num_clients,
-    min_evaluate_clients=num_clients,
-    min_available_clients=num_clients,
-    evaluate_metrics_aggregation_fn=aggregate_weighted_average,
-    on_fit_config_fn=_on_fit_config_fn,
-    on_evaluate_config_fn=_on_evaluate_config_fn,
-    evaluate_fn=federated_evaluation_function
-)
+def simulate(config):
+    num_clients = config.num_clients
+    dataset_name = config.dataset_name
+    num_rounds = config.num_rounds
+    client_resources = config.client_resources
+    client_train_config = {
+        'epochs': config.epochs,
+        'batch_size': config.batch_size,
+        'initial_lr_inv': config.lr_inv,
+        'weight_folder': '',  # empty string: don't save
+        'test_every_epoch': config.test_every_epoch,
+        'print_hash_every_epoch': False,
+        'shuffle_dataset_every_epoch': config.shuffle_dataset_every_epoch,
+        'verbose': False
+    }
+    train_ratio = config.train_ratio  # proportion of the training set used for training (the rest for validation)
+    fraction_fit = config.fraction_fit
+    fraction_evaluate = config.fraction_evaluate
 
-# Start simulation
-hist = fl.simulation.start_simulation(
-    client_fn=client_fn,
-    num_clients=num_clients,
-    config=fl.server.ServerConfig(num_rounds=num_rounds),
-    strategy=strategy,
-    client_resources=client_resources,
-)
+    client_datasets, test_dataset = load_datasets(dataset_name, num_clients, train_ratio)
+
+    strategy = FedAvgInt(
+        fraction_fit=fraction_fit,
+        fraction_evaluate=fraction_evaluate,
+        evaluate_metrics_aggregation_fn=aggregate_weighted_average,
+        on_fit_config_fn=lambda server_round: _on_fit_config_fn(client_train_config, server_round),
+        on_evaluate_config_fn=_on_evaluate_config_fn,
+        evaluate_fn=lambda server_round, parameters, fed_eval_config: federated_evaluation_function(
+            dataset_name, test_dataset, server_round, parameters, fed_eval_config)
+    )
+
+    # Start simulation
+    hist = fl.simulation.start_simulation(
+        client_fn=lambda cid: client_fn(cid, dataset_name, client_datasets),
+        num_clients=num_clients,
+        config=fl.server.ServerConfig(num_rounds=num_rounds),
+        strategy=strategy,
+        client_resources=client_resources,
+    )
+
+    return hist
+
+
+def agent_sweep():
+    with wandb.init():
+        # custom name containing lr, bs, epochs, shuffle
+        custom_name = f'lr{wandb.config.lr_inv}_bs{wandb.config.batch_size}_ep{wandb.config.epochs}_sh{wandb.config.shuffle_dataset_every_epoch}'
+        wandb.run.name = custom_name
+
+        config = wandb.config
+        hist = simulate(config)
+
+        centralized_acc = hist.metrics_centralized['accuracy']
+        final_round_acc = centralized_acc[-1][1]
+        max_acc = max([acc for _, acc in centralized_acc])
+
+        wandb.log({'final_round_acc': final_round_acc, 'max_acck': max_acc})
+
+
+if __name__ == '__main__':
+    wandb.agent(sweep_id='wqt2xd3u', function=agent_sweep,
+                project='part ii diss', entity='wz337', count=1)
