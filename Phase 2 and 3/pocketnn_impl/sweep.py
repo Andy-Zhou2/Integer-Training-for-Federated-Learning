@@ -34,7 +34,7 @@ parameters_dict.update({
         'value': 'mnist'
     },
     'num_rounds': {
-        'value': 20
+        'value': 100
     },
     'client_resources': {
         'value': {"num_cpus": 1, "num_gpus": 0.0}

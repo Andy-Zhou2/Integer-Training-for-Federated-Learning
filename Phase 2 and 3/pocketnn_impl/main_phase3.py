@@ -198,7 +198,7 @@ def agent_sweep():
         final_round_acc = centralized_acc[-1][1]
         max_acc = max([acc for _, acc in centralized_acc])
 
-        wandb.log({'final_round_acc': final_round_acc, 'max_acck': max_acc})
+        wandb.log({'final_round_acc': final_round_acc, 'max_acc': max_acc})
 
 
 if __name__ == '__main__':
