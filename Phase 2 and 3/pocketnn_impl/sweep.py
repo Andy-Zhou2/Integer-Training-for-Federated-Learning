@@ -10,7 +10,9 @@ sweep_config = {
 
 parameters_dict = {
     'lr_inv': {
-        'values': [200, 500, 1000, 2000, 5000, 10000]
+        'distribution': 'int_uniform',
+        'min': 400,
+        'max': 2500
     },
     'batch_size': {
         'distribution': 'int_uniform',
@@ -18,15 +20,17 @@ parameters_dict = {
         'max': 30
     },
     'epochs': {
-        'values': [1, 2, 3]
+        'distribution': 'int_uniform',
+        'min': 1,
+        'max': 20
     },
-    'shuffle_dataset_every_epoch': {
-        'values': [True, False]
-    }
 }
 
 # also set fixed parameters
 parameters_dict.update({
+    'shuffle_dataset_every_epoch': {
+        'value': True
+    },
     'num_clients': {
         'value': 100
     },
