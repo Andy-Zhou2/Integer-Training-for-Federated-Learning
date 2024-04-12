@@ -55,6 +55,9 @@ parameters_dict.update({
     'fraction_evaluate': {
         'value': 1.0
     },
+    'global_seed': {
+        'value': 123
+    },
 })
 
 sweep_config['parameters'] = parameters_dict

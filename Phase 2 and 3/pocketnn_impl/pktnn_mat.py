@@ -1,8 +1,6 @@
 import numpy as np
 from calc_util import truncate_divide
 
-np.random.seed(12345)
-
 
 def rand_range(lower: int, upper: int):
     r = np.random.randint(256 ** 4, dtype='<u4', size=1)[0]

@@ -57,24 +57,24 @@ def load_datasets(dataset_name: str, num_clients: int, train_ratio: float) -> Tu
 
 
 class FlowerClient(fl.client.NumPyClient):
-    def __init__(self, net: PktNet, client_dataset: ClientDataset, cid: str):
+    def __init__(self, net: PktNet, client_dataset: ClientDataset, cid: str, seed: int):
         self.net = net
         self.client_dataset = client_dataset
         self.cid = cid
+        self.seed = seed
 
     def get_parameters(self, config):
         return self.net.get_parameters()
 
     def fit(self, parameters: NDArrays, config: Dict[str, Any]):
-        self.net.set_parameters(parameters)
-        # print(f'before: {self.cid} has param sum {sum([np.sum(p) for p in parameters])}')
+        random.seed(self.seed)
+        np.random.seed(self.seed)
 
+        self.net.set_parameters(parameters)
         pktnn_train(self.net, self.client_dataset, config=config | {'cid': self.cid})
         params = self.net.get_parameters()
-        # print(f'after: {self.cid} has param sum {sum([np.sum(p) for p in params])}')
 
         len_train_data = self.client_dataset['train'][0].shape[0]
-
         return params, len_train_data, {'cid': self.cid}
 
     def evaluate(self, parameters: NDArrays, config: Dict[str, Any]):
@@ -85,13 +85,13 @@ class FlowerClient(fl.client.NumPyClient):
         return float('NAN'), len_val_data, {"accuracy": accuracy, 'cid': self.cid}
 
 
-def client_fn(cid: str, dataset_name: str, client_datasets: List[ClientDataset]):
+def client_fn(cid: str, dataset_name: str, client_datasets: List[ClientDataset], seed: int):
     # Load model
     net = get_net(dataset_name)
     cid_int = int(cid)
     client_dataset = client_datasets[cid_int]
 
-    return FlowerClient(net, client_dataset, cid).to_client()
+    return FlowerClient(net, client_dataset, cid, seed).to_client()
 
 
 def aggregate_weighted_average(metrics: list[tuple[int, dict]]) -> dict:
@@ -141,6 +141,11 @@ def federated_evaluation_function(dataset_name: str, test_dataset: DatasetTuple,
 
 
 def simulate(config):
+    global_seed = config.global_seed
+    random.seed(global_seed)
+    np.random.seed(global_seed)
+
+    client_seed = np.random.randint(0, 2**31 - 1)
     num_clients = config.num_clients
     dataset_name = config.dataset_name
     num_rounds = config.num_rounds
@@ -173,7 +178,7 @@ def simulate(config):
 
     # Start simulation
     hist = fl.simulation.start_simulation(
-        client_fn=lambda cid: client_fn(cid, dataset_name, client_datasets),
+        client_fn=lambda cid: client_fn(cid, dataset_name, client_datasets, client_seed),
         num_clients=num_clients,
         config=fl.server.ServerConfig(num_rounds=num_rounds),
         strategy=strategy,
