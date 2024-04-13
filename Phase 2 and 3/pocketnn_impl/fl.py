@@ -6,54 +6,12 @@ import numbers
 
 import flwr as fl
 from network import get_net
-from dataset import get_dataset, DatasetTuple
+from dataset import get_dataset, DatasetTuple, load_dataset, ClientDataset
 from network import PktNet
 from flwr.common.typing import NDArrays, NDArrayInt
 from train_evaluate import pktnn_train, pktnn_evaluate
 from strategy import FedAvgInt
 import wandb
-
-ClientDataset = Dict[str, DatasetTuple]
-
-
-def load_datasets(dataset_name: str, num_clients: int, train_ratio: float) -> Tuple[List[ClientDataset], DatasetTuple]:
-    """
-    Load the dataset and split the training set into NUM_CLIENTS partitions.
-
-    :param train_ratio: the proportion of the training set used for training (the rest for validation)
-    :param num_clients: the number of clients
-    :param dataset_name: the name of the dataset
-    :return: a list of client datasets and the test dataset
-    """
-    train_data, test_data = get_dataset(dataset_name)
-    (train_images, train_labels), (test_images, test_labels) = train_data, test_data
-
-    # shuffle training dataset
-    indices = np.arange(len(train_images))
-    np.random.shuffle(indices)
-    train_images = train_images[indices]
-    train_labels = train_labels[indices]
-
-    # split the training set into NUM_CLIENTS partitions, and each partition into train and validation sets
-    size_each_client = len(train_images) // num_clients
-    size_training_each_client = int(size_each_client * train_ratio)
-
-    client_dataset = []
-    for partition_id in range(num_clients):
-        start = partition_id * size_each_client
-        end = start + size_each_client
-        client_train_indices = indices[start:start + size_training_each_client]
-        client_train_dataset = (train_images[client_train_indices], train_labels[client_train_indices])
-        client_val_indices = indices[start + size_training_each_client:end]
-        client_val_dataset = (train_images[client_val_indices], train_labels[client_val_indices])
-        client_dataset.append({
-            'train': client_train_dataset,
-            'test': client_val_dataset
-        })
-
-    test_dataset = (test_images, test_labels)
-
-    return client_dataset, test_dataset
 
 
 class FlowerClient(fl.client.NumPyClient):
@@ -78,6 +36,9 @@ class FlowerClient(fl.client.NumPyClient):
         return params, len_train_data, {'cid': self.cid}
 
     def evaluate(self, parameters: NDArrays, config: Dict[str, Any]):
+        if self.client_dataset['test'] is None:
+            return float('NAN'), 1, {"accuracy": float('NAN'),
+                                     'cid': self.cid}  # return 1 as the number of data to avoid division by 0
         self.net.set_parameters(parameters)
         accuracy = pktnn_evaluate(self.net, self.client_dataset['test'])
         len_val_data = self.client_dataset['test'][0].shape[0]
@@ -145,9 +106,10 @@ def simulate(config):
     random.seed(global_seed)
     np.random.seed(global_seed)
 
-    client_seed = np.random.randint(0, 2**31 - 1)
+    client_seed = np.random.randint(0, 2 ** 31 - 1)
     num_clients = config.num_clients
     dataset_name = config.dataset_name
+    dataset_dirichlet_alpha = config.dataset_dirichlet_alpha
     num_rounds = config.num_rounds
     client_resources = config.client_resources
     client_train_config = {
@@ -164,7 +126,7 @@ def simulate(config):
     fraction_fit = config.fraction_fit
     fraction_evaluate = config.fraction_evaluate
 
-    client_datasets, test_dataset = load_datasets(dataset_name, num_clients, train_ratio)
+    client_datasets, test_dataset = load_dataset(dataset_name, dataset_dirichlet_alpha, num_clients, train_ratio)
 
     strategy = FedAvgInt(
         fraction_fit=fraction_fit,
