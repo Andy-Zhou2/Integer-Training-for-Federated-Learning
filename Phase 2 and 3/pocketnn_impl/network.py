@@ -133,10 +133,58 @@ class FashionMNISTNet(PktNet):
         return [self.fc1, self.fc2, self.fc3, self.fc_last]
 
 
-def get_net(dataset_name: str) -> PktNet:
-    if dataset_name == 'mnist':
+class CustomLinearNet(PktNet):
+    def __init__(self, num_classes: int, dim_input: int, fc_dims: List[int], activation: str):
+        """
+        Create a custom linear network. The network will have len(fc_dims) + 1 layers.
+        :param num_classes:
+        :param dim_input:
+        :param fc_dims: The dimensions of the hidden layers.
+        :param activation:
+        """
+        self.fc_list = []
+        for i in range(len(fc_dims)):
+            if i == 0:
+                fc = PktFc(dim_input, fc_dims[i], use_dfa=True, activation=activation)
+            else:
+                fc = PktFc(fc_dims[i - 1], fc_dims[i], use_dfa=True, activation=activation)
+            self.fc_list.append(fc)
+
+        fc_last = PktFc(fc_dims[-1], num_classes, use_dfa=True, activation=activation)
+        self.fc_list.append(fc_last)
+
+        for i in range(len(self.fc_list) - 1):
+            self.fc_list[i].set_next_layer(self.fc_list[i + 1])
+
+    def forward(self, x: PktMat) -> PktMat:
+        self.fc_list[0].forward(x)
+        return self.fc_list[-1].output
+
+    def backward(self, loss_delta_mat: PktMat, lr_inv: np.int_):
+        self.fc_list[-1].backward(loss_delta_mat, lr_inv)
+
+    def save(self, filename: str):
+        save_state(self.fc_list, filename)
+
+    def load(self, filename: str):
+        load_state(self.fc_list, filename)
+
+    def get_fc_list(self) -> List[PktFc]:
+        return self.fc_list
+
+
+def get_net(model_name: str) -> PktNet:
+    if model_name == 'mnist_default':
         return MNISTNet()
-    elif dataset_name == 'fashion_mnist':
+    elif model_name == 'fashion_mnist_default':
         return FashionMNISTNet()
+
+    elif model_name.startswith('custom '):  # for example, custom [200, 100]
+        model_name = model_name[model_name.find('[') + 1: model_name.find(']')].split(',')
+        if len(model_name) == 1 and model_name[0] == '':
+            model_name = []
+        else:
+            model_name = [int(x) for x in model_name]
+        return CustomLinearNet(num_classes=10, dim_input=28 * 28, fc_dims=model_name, activation='pocket_tanh')
     else:
         raise ValueError('Invalid dataset name')

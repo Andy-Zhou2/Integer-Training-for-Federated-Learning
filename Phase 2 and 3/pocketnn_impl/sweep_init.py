@@ -1,4 +1,5 @@
 import wandb
+import pprint
 
 sweep_config = {
     'method': 'random',
@@ -11,19 +12,32 @@ sweep_config = {
 parameters_dict = {
     'lr_inv': {
         'distribution': 'int_uniform',
-        'min': 400,
-        'max': 2500
+        'min': 100,
+        'max': 3000
     },
     'batch_size': {
         'distribution': 'int_uniform',
         'min': 10,
-        'max': 30
+        'max': 40
     },
     'epochs': {
         'distribution': 'int_uniform',
         'min': 1,
         'max': 20
     },
+    'dataset_dirichlet_alpha': {
+        'values': [0.1, 1, 1000]
+    },
+    'model_name': {
+        'values': ['custom []',
+                   'custom [50]', 'custom [100]', 'custom [200]', 'custom [100, 100]',
+                   'custom [200, 100]', 'custom [200, 100, 50]', 'custom [400, 200, 100]',
+                   'custom [400, 200, 100, 50]',
+                   'custom [400, 200, 200, 100, 50]']
+    },
+    'fraction_fit': {
+        'values': [0.15, 1]
+    }
 }
 
 # also set fixed parameters
@@ -38,7 +52,7 @@ parameters_dict.update({
         'value': 'mnist'
     },
     'num_rounds': {
-        'value': 100
+        'value': 40
     },
     'client_resources': {
         'value': {"num_cpus": 1, "num_gpus": 0.0}
@@ -47,10 +61,7 @@ parameters_dict.update({
         'value': False
     },
     'train_ratio': {
-        'value': 0.8
-    },
-    'fraction_fit': {
-        'value': 1.0
+        'value': 1
     },
     'fraction_evaluate': {
         'value': 1.0
@@ -58,11 +69,13 @@ parameters_dict.update({
     'global_seed': {
         'value': 123
     },
+    'use_wandb': {
+        'value': True
+    },
 })
 
 sweep_config['parameters'] = parameters_dict
 
-import pprint
 pprint.pprint(sweep_config)
 
 sweep_id = wandb.sweep(sweep_config, project='part ii diss', entity='wz337')

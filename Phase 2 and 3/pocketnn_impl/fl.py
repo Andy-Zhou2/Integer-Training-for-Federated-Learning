@@ -46,9 +46,9 @@ class FlowerClient(fl.client.NumPyClient):
         return float('NAN'), len_val_data, {"accuracy": accuracy, 'cid': self.cid}
 
 
-def client_fn(cid: str, dataset_name: str, client_datasets: List[ClientDataset], seed: int):
+def client_fn(cid: str, model_name: str, client_datasets: List[ClientDataset], seed: int):
     # Load model
-    net = get_net(dataset_name)
+    net = get_net(model_name)
     cid_int = int(cid)
     client_dataset = client_datasets[cid_int]
 
@@ -92,12 +92,15 @@ def _on_evaluate_config_fn(server_round: int):
     return {"server_round": server_round}
 
 
-def federated_evaluation_function(dataset_name: str, test_dataset: DatasetTuple,
-                                  server_round: int, parameters: NDArrays, fed_eval_config: Dict[str, Any]):
+def federated_evaluation_function(model_name: str, test_dataset: DatasetTuple,
+                                  server_round: int, parameters: NDArrays, fed_eval_config: Dict[str, Any],
+                                  use_wandb: bool = False):
     """returns (loss, dict of results)"""
-    net = get_net(dataset_name)
+    net = get_net(model_name)
     net.set_parameters(parameters)
     accuracy = pktnn_evaluate(net, test_dataset)
+    if use_wandb:
+        wandb.log({"accuracy": accuracy})
     return float('NAN'), {"accuracy": accuracy}
 
 
@@ -125,6 +128,8 @@ def simulate(config):
     train_ratio = config.train_ratio  # proportion of the training set used for training (the rest for validation)
     fraction_fit = config.fraction_fit
     fraction_evaluate = config.fraction_evaluate
+    model_name = config.model_name  # model name to be used, such as mnist_default or custom [100, 100]
+    use_wandb = config.use_wandb  # report each round accuracy to wandb if True
 
     client_datasets, test_dataset = load_dataset(dataset_name, dataset_dirichlet_alpha, num_clients, train_ratio)
 
@@ -135,12 +140,12 @@ def simulate(config):
         on_fit_config_fn=lambda server_round: _on_fit_config_fn(client_train_config, server_round),
         on_evaluate_config_fn=_on_evaluate_config_fn,
         evaluate_fn=lambda server_round, parameters, fed_eval_config: federated_evaluation_function(
-            dataset_name, test_dataset, server_round, parameters, fed_eval_config)
+            model_name, test_dataset, server_round, parameters, fed_eval_config, use_wandb)
     )
 
     # Start simulation
     hist = fl.simulation.start_simulation(
-        client_fn=lambda cid: client_fn(cid, dataset_name, client_datasets, client_seed),
+        client_fn=lambda cid: client_fn(cid, model_name, client_datasets, client_seed),
         num_clients=num_clients,
         config=fl.server.ServerConfig(num_rounds=num_rounds),
         strategy=strategy,

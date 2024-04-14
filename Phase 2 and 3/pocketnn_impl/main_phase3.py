@@ -16,9 +16,18 @@ config = {
     'fraction_evaluate': 1.0,
     'global_seed': 123,
     'dataset_dirichlet_alpha': 0.1,
+    'model_name': 'custom [100, 100]',
+    'use_wandb': False
 }
 
 # Convert dictionary to SimpleNamespace to allow dot access
 config = SimpleNamespace(**config)
 hist = simulate(config)
 print(hist)
+
+centralized_acc = hist.metrics_centralized['accuracy']
+final_round_acc = centralized_acc[-1][1]
+max_acc = max([acc for _, acc in centralized_acc])
+
+print(f'Final round accuracy: {final_round_acc}')
+print(f'Max accuracy: {max_acc}')

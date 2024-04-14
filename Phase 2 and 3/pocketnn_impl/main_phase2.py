@@ -15,7 +15,7 @@ weight_folder = f'../data/weights/{dataset_name}'
 os.makedirs(weight_folder, exist_ok=True)
 
 print('Creating model')
-net = get_net(dataset_name)
+net = get_net(dataset_name + '_default')
 
 # initial testing
 print('Initial testing')

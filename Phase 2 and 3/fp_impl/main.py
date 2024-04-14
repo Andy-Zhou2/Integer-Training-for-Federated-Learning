@@ -5,11 +5,12 @@ import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
 
+
 # Model for MNIST
 class MNISTNet(nn.Module):
     def __init__(self):
         super(MNISTNet, self).__init__()
-        self.fc1 = nn.Linear(28*28, 100)
+        self.fc1 = nn.Linear(28 * 28, 100)
         self.fc2 = nn.Linear(100, 50)
         self.fc3 = nn.Linear(50, 10)
 
@@ -20,22 +21,44 @@ class MNISTNet(nn.Module):
         x = self.fc3(x)
         return x
 
-# Model for Fashion-MNIST
+
 class FashionMNISTNet(nn.Module):
     def __init__(self):
         super(FashionMNISTNet, self).__init__()
-        self.fc1 = nn.Linear(28*28, 200)
-        self.fc2 = nn.Linear(200, 100)
-        self.fc3 = nn.Linear(100, 50)
-        self.fc4 = nn.Linear(50, 10)
+        self.fc1 = nn.Linear(28*28, 20000)
+        self.bn1 = nn.BatchNorm1d(4096)  # Batch normalization for first fully connected layer
+        self.fc2 = nn.Linear(4096, 2048)
+        self.bn2 = nn.BatchNorm1d(2048)  # Batch normalization for second fully connected layer
+        self.fc3 = nn.Linear(2048, 1024)
+        self.bn3 = nn.BatchNorm1d(1024)  # Batch normalization for third fully connected layer
+        self.fc4 = nn.Linear(1024, 1024)
+        self.bn4 = nn.BatchNorm1d(1024)  # Batch normalization for fourth fully connected layer
+        self.fc5 = nn.Linear(1024, 512)
+        self.bn5 = nn.BatchNorm1d(512)   # Batch normalization for fifth fully connected layer
+        self.fc6 = nn.Linear(512, 256)
+        self.bn6 = nn.BatchNorm1d(256)   # Batch normalization for sixth fully connected layer
+        self.fc7 = nn.Linear(256, 128)
+        self.bn7 = nn.BatchNorm1d(128)   # Batch normalization for seventh fully connected layer
+        self.fc8 = nn.Linear(128, 128)
+        self.bn8 = nn.BatchNorm1d(128)   # Batch normalization for eighth fully connected layer
+        self.fc9 = nn.Linear(128, 10)    # Output layer for 10 classes
 
     def forward(self, x):
-        x = torch.flatten(x, 1)
-        x = torch.tanh(self.fc1(x))
-        x = torch.tanh(self.fc2(x))
-        x = torch.tanh(self.fc3(x))
-        x = self.fc4(x)
+        x = x.view(-1, 28*28)  # Flatten the input
+        x = F.relu(self.bn1(self.fc1(x)))
+        x = F.relu(self.bn2(self.fc2(x)))
+        x = F.relu(self.bn3(self.fc3(x)))
+        x = F.relu(self.bn4(self.fc4(x)))
+        x = F.relu(self.bn5(self.fc5(x)))
+        x = F.relu(self.bn6(self.fc6(x)))
+        x = F.relu(self.bn7(self.fc7(x)))
+        x = F.relu(self.bn8(self.fc8(x)))
+        x = self.fc9(x)
         return x
+
+
+model = FashionMNISTNet()
+
 
 def train(model, device, train_loader, optimizer, epoch):
     model.train()
@@ -50,7 +73,8 @@ def train(model, device, train_loader, optimizer, epoch):
         # if batch_idx % 10 == 0:
         #     print(f'Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_loader.dataset)} ({100. * batch_idx / len(train_loader):.0f}%)]\tLoss: {loss.item():.6f}')
 
-def test_model(model, device, test_loader):
+
+def evaluate_model(model, device, test_loader):
     model.eval()
     test_loss = 0
     correct = 0
@@ -66,11 +90,12 @@ def test_model(model, device, test_loader):
     print(f'Test set: Average loss: {test_loss:.4f}, Accuracy: {correct}/{len(test_loader.dataset)} '
           f'({100. * correct / len(test_loader.dataset):.2f}%)')
 
+
 def main():
     # Hyperparameters
     batch_size = 20
     epochs = 100
-    lr = 0.1
+    lr = 0.05
     gamma = 0.5  # Learning rate decay
     step_size = 10  # Learning rate decay step
 
@@ -107,10 +132,11 @@ def main():
     # Training loop
     for epoch in range(1, epochs + 1):
         train(model, device, train_loader, optimizer, epoch)
-        test_model(model, device, test_loader)
+        evaluate_model(model, device, test_loader)
         scheduler.step()
 
     print("Training complete.")
+
 
 if __name__ == '__main__':
     main()

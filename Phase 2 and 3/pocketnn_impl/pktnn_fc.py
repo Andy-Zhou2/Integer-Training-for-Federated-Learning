@@ -7,7 +7,8 @@ import numpy as np
 
 
 class PktFc(PktLayer):
-    def __init__(self, in_dim, out_dim, use_dfa=True, activation='pocket_tanh', use_bn=False):
+    def __init__(self, in_dim: int, out_dim: int, use_dfa: bool = True, activation: str = 'pocket_tanh',
+                 use_bn: bool = False):
         super().__init__()
         self.layer_type = PktLayer.LayerType.POCKET_FC
         self.in_dim: int = in_dim
