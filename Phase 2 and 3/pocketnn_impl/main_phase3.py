@@ -4,7 +4,7 @@ from types import SimpleNamespace
 config = {
     'num_clients': 100,
     'dataset_name': 'mnist',
-    'num_rounds': 100,
+    'num_rounds': 150,
     'client_resources': {"num_cpus": 1, "num_gpus": 0.0},
     'lr_inv': 1000,
     'batch_size': 15,
@@ -15,7 +15,7 @@ config = {
     'fraction_fit': 1.0,
     'fraction_evaluate': 1.0,
     'global_seed': 123,
-    'dataset_dirichlet_alpha': 1000,
+    'dataset_dirichlet_alpha': 0.1,
 }
 
 # Convert dictionary to SimpleNamespace to allow dot access

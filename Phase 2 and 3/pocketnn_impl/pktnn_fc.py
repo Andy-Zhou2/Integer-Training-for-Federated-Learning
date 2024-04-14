@@ -46,6 +46,7 @@ class PktFc(PktLayer):
         return self.output
 
     def forward(self, x):
+        """Note that input, output and actv_grad_inv are set and used in the backwards process"""
         self.input = x
 
         inter = mat_mul_mat(x, self.weight)
