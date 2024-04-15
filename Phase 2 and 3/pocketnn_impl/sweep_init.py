@@ -72,6 +72,9 @@ parameters_dict.update({
     'use_wandb': {
         'value': True
     },
+    'config.train_verbose': {
+        'value': True
+    }
 })
 
 sweep_config['parameters'] = parameters_dict

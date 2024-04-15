@@ -143,15 +143,11 @@ class CustomLinearNet(PktNet):
         :param activation:
         """
         self.fc_list = []
-        for i in range(len(fc_dims)):
-            if i == 0:
-                fc = PktFc(dim_input, fc_dims[i], use_dfa=True, activation=activation)
-            else:
-                fc = PktFc(fc_dims[i - 1], fc_dims[i], use_dfa=True, activation=activation)
-            self.fc_list.append(fc)
 
-        fc_last = PktFc(fc_dims[-1], num_classes, use_dfa=True, activation=activation)
-        self.fc_list.append(fc_last)
+        all_dims = [dim_input] + fc_dims + [num_classes]
+        for i in range(len(all_dims) - 1):
+            fc = PktFc(all_dims[i], all_dims[i + 1], use_dfa=True, activation=activation)
+            self.fc_list.append(fc)
 
         for i in range(len(self.fc_list) - 1):
             self.fc_list[i].set_next_layer(self.fc_list[i + 1])

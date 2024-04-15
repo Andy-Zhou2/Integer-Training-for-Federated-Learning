@@ -16,8 +16,9 @@ config = {
     'fraction_evaluate': 1.0,
     'global_seed': 123,
     'dataset_dirichlet_alpha': 0.1,
-    'model_name': 'custom [100, 100]',
-    'use_wandb': False
+    'model_name': 'custom []',
+    'use_wandb': False,
+    'train_verbose': True
 }
 
 # Convert dictionary to SimpleNamespace to allow dot access

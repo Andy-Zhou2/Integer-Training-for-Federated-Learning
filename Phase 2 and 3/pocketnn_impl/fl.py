@@ -123,7 +123,7 @@ def simulate(config):
         'test_every_epoch': config.test_every_epoch,
         'print_hash_every_epoch': False,
         'shuffle_dataset_every_epoch': config.shuffle_dataset_every_epoch,
-        'verbose': False
+        'verbose': config.train_verbose
     }
     train_ratio = config.train_ratio  # proportion of the training set used for training (the rest for validation)
     fraction_fit = config.fraction_fit
