@@ -4,14 +4,13 @@ from train_evaluate import pktnn_train, pktnn_evaluate
 from dataset import get_dataset
 import hydra
 from omegaconf import DictConfig, OmegaConf
-from flwr.common.logger import log
 import logging
 
 
 @hydra.main(config_path='Configs/centralized', config_name='mnist', version_base='1.2')
 def main(config: DictConfig):
-    log(logging.INFO, OmegaConf.to_yaml(config))
-    log(logging.INFO, 'Loading data')
+    logging.info(OmegaConf.to_yaml(config))
+    logging.info('Loading data')
 
     dataset_name = config.dataset
     assert dataset_name in ['mnist', 'fashion_mnist']
@@ -22,15 +21,15 @@ def main(config: DictConfig):
     weight_folder = config.weight_folder
     os.makedirs(weight_folder, exist_ok=True)
 
-    log(logging.INFO, 'Creating model')
+    logging.info('Creating model')
     net = get_net(dataset_name + '_default')
 
     # initial testing
-    log(logging.INFO, 'Initial testing')
+    logging.info('Initial testing')
     acc = pktnn_evaluate(net, train_data)
-    log(logging.INFO, f'Initial training accuracy: {acc * 100}%')
+    logging.info(f'Initial training accuracy: {acc * 100}%')
     acc = pktnn_evaluate(net, test_data)
-    log(logging.INFO, f'Initial testing accuracy: {acc * 100}%')
+    logging.info(f'Initial testing accuracy: {acc * 100}%')
 
     config = {
         'epochs': config.epochs,
@@ -47,8 +46,8 @@ def main(config: DictConfig):
         'test': test_data
     }
     result = pktnn_train(net, pkt_data, config)
-    log(logging.INFO, f'Train completed. Result: ')
-    log(logging.INFO, result)
+    logging.info(f'Train completed. Result: ')
+    logging.info(result)
 
 
 if __name__ == '__main__':
