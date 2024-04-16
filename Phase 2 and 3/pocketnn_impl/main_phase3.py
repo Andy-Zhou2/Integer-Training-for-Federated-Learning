@@ -3,15 +3,16 @@ from types import SimpleNamespace
 from omegaconf import DictConfig, OmegaConf
 import hydra
 from flwr.common.logger import log
+import logging
 
 
 @hydra.main(config_path='Configs/FL', config_name='mnist', version_base='1.2')
 def main(config: DictConfig):
-    log(OmegaConf.to_yaml(config))
+    log(logging.INFO, OmegaConf.to_yaml(config))
 
     # Convert dictionary to SimpleNamespace to allow dot access
     hist = simulate(config)
-    log(hist)
+    log(logging.INFO, hist)
 
     centralized_acc = hist.metrics_centralized['accuracy']
     final_round_acc = centralized_acc[-1][1]

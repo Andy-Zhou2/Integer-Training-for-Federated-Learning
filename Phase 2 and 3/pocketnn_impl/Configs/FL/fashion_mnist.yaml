@@ -14,6 +14,6 @@ fraction_fit: 0.15  # choose between {0.15, 1}
 fraction_evaluate: 0
 global_seed: 123
 dataset_dirichlet_alpha: 1  # choose between {0.1, 1, 1000}
-model_name: fashion_mnist_default
+model_name: "custom []"
 use_wandb: false
 train_verbose: false
