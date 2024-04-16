@@ -1,0 +1,9 @@
+dataset: fashion_mnist  # choose between {mnist, fashion_mnist}
+epochs: 100
+batch_size: 20
+initial_lr_inv: 1000
+weight_folder: ../data/weights/${dataset}
+test_every_epoch: true
+print_hash_every_epoch: false
+shuffle_dataset_every_epoch: false
+verbose: false

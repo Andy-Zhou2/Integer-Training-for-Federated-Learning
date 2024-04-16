@@ -12,6 +12,7 @@ from flwr.common.typing import NDArrays, NDArrayInt
 from train_evaluate import pktnn_train, pktnn_evaluate
 from strategy import FedAvgInt
 import wandb
+from utils_random import generate_rng, DeterministicClientManager, set_seed
 
 
 class FlowerClient(fl.client.NumPyClient):
@@ -106,8 +107,7 @@ def federated_evaluation_function(model_name: str, test_dataset: DatasetTuple,
 
 def simulate(config):
     global_seed = config.global_seed
-    random.seed(global_seed)
-    np.random.seed(global_seed)
+    set_seed(global_seed)  # set seed before generating rng and client_seed
 
     client_seed = np.random.randint(0, 2 ** 31 - 1)
     num_clients = config.num_clients
@@ -131,7 +131,11 @@ def simulate(config):
     model_name = config.model_name  # model name to be used, such as mnist_default or custom [100, 100]
     use_wandb = config.use_wandb  # report each round accuracy to wandb if True
 
+    _, client_cid_rng, _ = generate_rng(global_seed)
+
     client_datasets, test_dataset = load_dataset(dataset_name, dataset_dirichlet_alpha, num_clients, train_ratio)
+
+    client_manager = DeterministicClientManager(client_cid_rng, enable_resampling=False)
 
     strategy = FedAvgInt(
         fraction_fit=fraction_fit,
@@ -150,6 +154,7 @@ def simulate(config):
         config=fl.server.ServerConfig(num_rounds=num_rounds),
         strategy=strategy,
         client_resources=client_resources,
+        client_manager=client_manager
     )
 
     return hist

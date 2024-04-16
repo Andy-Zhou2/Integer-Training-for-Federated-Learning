@@ -1,0 +1,19 @@
+num_clients: 100
+dataset_name: fashion_mnist
+num_rounds: 1000
+client_resources:
+  num_cpus: 1
+  num_gpus: 0.0
+lr_inv: 1000
+batch_size: 20
+epochs: 1
+shuffle_dataset_every_epoch: true
+test_every_epoch: false
+train_ratio: 1
+fraction_fit: 0.15  # choose between {0.15, 1}
+fraction_evaluate: 0
+global_seed: 123
+dataset_dirichlet_alpha: 1  # choose between {0.1, 1, 1000}
+model_name: fashion_mnist_default
+use_wandb: false
+train_verbose: false
