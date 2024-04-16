@@ -1,14 +1,15 @@
 import numpy as np
 from network import PktNet
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Tuple, Optional, List
 from pktnn_mat import PktMat
 from pktnn_consts import UNSIGNED_4BIT_MAX
 from pktnn_loss import batch_l2_loss_delta
 import os
-import time
+import logging
 
 
-def pktnn_train(net: PktNet, data: Dict[str, Tuple[np.ndarray, np.ndarray]], config: Dict[str, Any]):
+def pktnn_train(net: PktNet, data: Dict[str, Tuple[np.ndarray, np.ndarray]], config: Dict[str, Any]) \
+        -> Dict[str, List[float]]:
     """
     Train the network on the given images and labels. Modify the network in place.
 
@@ -23,6 +24,12 @@ def pktnn_train(net: PktNet, data: Dict[str, Tuple[np.ndarray, np.ndarray]], con
     train_labels: np.ndarray = train_data[1]
     assert train_images.shape[0] == train_labels.shape[0], "Number of images and labels should be the same"
     num_train_samples = train_images.shape[0]
+
+    result = {
+        'loss': [],
+        'train_accuracy': [],
+        'test_accuracy': [],
+    }
 
     num_classes = 10
     mnist_rows = 28
@@ -45,7 +52,7 @@ def pktnn_train(net: PktNet, data: Dict[str, Tuple[np.ndarray, np.ndarray]], con
 
     for epoch in range(1, EPOCH + 1):
         if config['verbose']:
-            print(f'Epoch {epoch}')
+            logging.info(f'Epoch {epoch}')
 
         if config['shuffle_dataset_every_epoch']:
             np.random.shuffle(indices)
@@ -78,12 +85,16 @@ def pktnn_train(net: PktNet, data: Dict[str, Tuple[np.ndarray, np.ndarray]], con
 
             net.backward(loss_delta_mat, lr_inv)
 
+        train_acc = epoch_num_correct / num_train_samples
+        result['loss'].append(sum_loss)
+        result['train_accuracy'].append(train_acc)
+
         if config['print_hash_every_epoch']:
             fc_list = net.get_fc_list()
             params_sum = sum([fc.weight.sum() + fc.bias.sum() for fc in fc_list])
-            print(f'epoch {epoch}: has param sum {params_sum}')
+            logging.info(f'epoch {epoch}: has param sum {params_sum}')
             for fc in fc_list:
-                print(f'fc hash: {fc.weight.hash()} {fc.bias.hash()}')
+                logging.info(f'fc hash: {fc.weight.hash()} {fc.bias.hash()}')
 
         # save state
         weight_folder = config.get('weight_folder', '')
@@ -92,13 +103,15 @@ def pktnn_train(net: PktNet, data: Dict[str, Tuple[np.ndarray, np.ndarray]], con
             net.save(os.path.join(weight_folder, f'epoch_{epoch}.npz'))
 
         if config['verbose']:
-            print(f'Epoch {epoch}, loss: {sum_loss}, accuracy: {epoch_num_correct / num_train_samples * 100}%')
+            logging.info(f'Epoch {epoch}, loss: {sum_loss}, accuracy: {train_acc * 100}%')
 
         if config['test_every_epoch']:
             assert 'test' in data, "Test dataset is required if test_every_epoch is True"
             test_data = data['test']
             acc = pktnn_evaluate(net, test_data)
+            result['test_accuracy'].append(acc)
             print(f"Epoch {epoch}, testing accuracy: {acc * 100}%")
+    return result
 
 
 def pktnn_evaluate(net: PktNet, test_data: Tuple[np.ndarray, np.ndarray]) -> float:

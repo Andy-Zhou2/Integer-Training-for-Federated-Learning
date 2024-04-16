@@ -46,7 +46,9 @@ def main(config: DictConfig):
         'train': train_data,
         'test': test_data
     }
-    pktnn_train(net, pkt_data, config)
+    result = pktnn_train(net, pkt_data, config)
+    log(logging.INFO, f'Train completed. Result: ')
+    log(logging.INFO, result)
 
 
 if __name__ == '__main__':
