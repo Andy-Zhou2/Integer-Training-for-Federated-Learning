@@ -94,6 +94,15 @@ def pktnn_train(net: PktNet, data: Dict[str, Tuple[np.ndarray, np.ndarray]], con
         if config['verbose']:
             print(f'Epoch {epoch}, loss: {sum_loss}, accuracy: {epoch_num_correct / num_train_samples * 100}%')
 
+            # for each fc layer, print the 10%, 20%, ...100% percentile of the weights and biases
+            for fc in net.get_fc_list():
+                weight_percentiles = np.percentile(fc.weight.mat, np.arange(0, 101, 10))
+                bias_percentiles = np.percentile(fc.bias.mat, np.arange(0, 101, 10))
+                print(f'FC Layer: {fc.in_dim} -> {fc.out_dim}')
+                print(f'Weight percentiles: {weight_percentiles}')
+                print(f'Bias percentiles: {bias_percentiles}')
+
+
         if config['test_every_epoch']:
             assert 'test' in data, "Test dataset is required if test_every_epoch is True"
             test_data = data['test']

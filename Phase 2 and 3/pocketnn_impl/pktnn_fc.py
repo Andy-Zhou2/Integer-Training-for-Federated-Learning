@@ -51,8 +51,12 @@ class PktFc(PktLayer):
         self.input = x
 
         inter = mat_mul_mat(x, self.weight)
+        # print(f'inter: {np.percentile(inter.mat, np.arange(0, 101, 5))}')
+        # TODO: test activation
         inter.self_add_mat(self.bias)
+        # print(f'inter2: {np.percentile(inter.mat, np.arange(0, 101, 5))}')
         self.output, self.actv_grad_inv = activate(inter, self.activation, K_BIT, self.in_dim)
+        # print(f'output: {np.percentile(self.output.mat, np.arange(0, 101, 5))}, actv_grad_inv: {np.percentile(self.actv_grad_inv.mat, np.arange(0, 101, 5))}')
 
         if self.next_layer is not None:
             self.next_layer.forward(self.output)
