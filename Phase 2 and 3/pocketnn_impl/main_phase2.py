@@ -5,6 +5,7 @@ from dataset import get_dataset
 import hydra
 from omegaconf import DictConfig, OmegaConf
 import logging
+from utils_random import set_seed
 
 
 @hydra.main(config_path='Configs/centralized', config_name='mnist', version_base='1.2')
@@ -25,11 +26,14 @@ def main(config: DictConfig):
     net = get_net(dataset_name + '_default')
 
     # initial testing
-    logging.info('Initial testing')
-    acc = pktnn_evaluate(net, train_data)
-    logging.info(f'Initial training accuracy: {acc * 100}%')
-    acc = pktnn_evaluate(net, test_data)
-    logging.info(f'Initial testing accuracy: {acc * 100}%')
+    # logging.info('Initial testing')
+    # acc = pktnn_evaluate(net, train_data)
+    # logging.info(f'Initial training accuracy: {acc * 100}%')
+    # acc = pktnn_evaluate(net, test_data)
+    # logging.info(f'Initial testing accuracy: {acc * 100}%')
+
+    seed = config.seed
+    set_seed(seed)
 
     config = {
         'epochs': config.epochs,
@@ -41,6 +45,7 @@ def main(config: DictConfig):
         'shuffle_dataset_every_epoch': config.shuffle_dataset_every_epoch,
         'verbose': config.verbose
     }
+
     pkt_data = {
         'train': train_data,
         'test': test_data

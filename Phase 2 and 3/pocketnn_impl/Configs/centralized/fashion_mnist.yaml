@@ -7,3 +7,4 @@ test_every_epoch: true
 print_hash_every_epoch: true
 shuffle_dataset_every_epoch: true
 verbose: true
+seed: 123
