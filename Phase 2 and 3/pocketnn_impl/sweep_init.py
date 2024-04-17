@@ -33,7 +33,8 @@ parameters_dict = {
                    'custom [50]', 'custom [100]', 'custom [200]', 'custom [100, 100]',
                    'custom [200, 100]', 'custom [200, 100, 50]', 'custom [400, 200, 100]',
                    'custom [400, 200, 100, 50]',
-                   'custom [400, 200, 200, 100, 50]']
+                   'custom [400, 200, 200, 100, 50]',
+                   'fashion_mnist_default', 'mnist_default']
     },
     'fraction_fit': {
         'values': [0.15, 1]
@@ -49,7 +50,7 @@ parameters_dict.update({
         'value': 100
     },
     'dataset_name': {
-        'value': 'mnist'
+        'value': 'fashion_mnist'
     },
     'num_rounds': {
         'value': 40
@@ -64,7 +65,7 @@ parameters_dict.update({
         'value': 1
     },
     'fraction_evaluate': {
-        'value': 1.0
+        'value': 0
     },
     'global_seed': {
         'value': 123
@@ -72,8 +73,8 @@ parameters_dict.update({
     'use_wandb': {
         'value': True
     },
-    'config.train_verbose': {
-        'value': True
+    'train_verbose': {
+        'value': False
     }
 })
 
