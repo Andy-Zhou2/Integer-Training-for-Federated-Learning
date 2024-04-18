@@ -10,7 +10,7 @@ epochs: 1
 shuffle_dataset_every_epoch: true
 test_every_epoch: false
 train_ratio: 1
-fraction_fit: 0.15  # choose between {0.15, 1}
+fraction_fit: 1  # choose between {0.15, 1}
 fraction_evaluate: 0
 global_seed: 123
 dataset_dirichlet_alpha: 0.1  # choose between {0.1, 1, 1000}

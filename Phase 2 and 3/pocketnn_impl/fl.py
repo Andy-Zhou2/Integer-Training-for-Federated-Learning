@@ -144,7 +144,8 @@ def simulate(config):
         on_fit_config_fn=lambda server_round: _on_fit_config_fn(client_train_config, server_round),
         on_evaluate_config_fn=_on_evaluate_config_fn,
         evaluate_fn=lambda server_round, parameters, fed_eval_config: federated_evaluation_function(
-            model_name, test_dataset, server_round, parameters, fed_eval_config, use_wandb)
+            model_name, test_dataset, server_round, parameters, fed_eval_config, use_wandb),
+        inplace=False
     )
 
     # Start simulation
