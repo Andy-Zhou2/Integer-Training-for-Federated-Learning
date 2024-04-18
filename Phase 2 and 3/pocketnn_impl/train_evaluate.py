@@ -110,7 +110,7 @@ def pktnn_train(net: PktNet, data: Dict[str, Tuple[np.ndarray, np.ndarray]], con
             test_data = data['test']
             acc = pktnn_evaluate(net, test_data)
             result['test_accuracy'].append(acc)
-            print(f"Epoch {epoch}, testing accuracy: {acc * 100}%")
+            logging.info(f"Epoch {epoch}, testing accuracy: {acc * 100}%")
     return result
 
 
