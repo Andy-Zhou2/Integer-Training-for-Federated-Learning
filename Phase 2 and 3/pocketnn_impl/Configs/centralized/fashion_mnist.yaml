@@ -1,5 +1,5 @@
 dataset: fashion_mnist  # choose between {mnist, fashion_mnist}
-epochs: 100
+epochs: 1000
 batch_size: 20
 initial_lr_inv: 1000
 weight_folder: ../data/weights/${dataset}
