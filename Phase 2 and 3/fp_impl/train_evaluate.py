@@ -13,7 +13,9 @@ def train_one_epoch(model, device, train_loader, optimizer, epoch, verbose):
     correct_count = 0
     total_count = 0
     total_loss = 0
-    for batch_idx, (data, target) in enumerate(train_loader):
+    for batch_idx, batch in enumerate(train_loader):
+        data = batch['image']
+        target = batch['label']
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
         output = model(data)
@@ -35,12 +37,14 @@ def train_one_epoch(model, device, train_loader, optimizer, epoch, verbose):
     return total_loss, correct_count / total_count
 
 
-def evaluate_model(model, device, test_loader, verbose):
+def evaluate_model(model, device, test_loader, verbose=True):
     model.eval()
     test_loss = 0
     correct = 0
     with torch.no_grad():
-        for data, target in test_loader:
+        for batch in test_loader:
+            data = batch['image'];
+            target = batch['label']
             data, target = data.to(device), target.to(device)
             output = model(data)
             test_loss += F.cross_entropy(output, target, reduction='sum').item()  # sum up batch loss

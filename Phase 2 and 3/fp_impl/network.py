@@ -37,9 +37,9 @@ class FashionMNISTNet(nn.Module):
 
 
 def get_net(model_name: str) -> nn.Module:
-    if model_name == 'MNIST_default':
+    if model_name == 'mnist_default':
         model = MNISTNet()
-    elif model_name == 'FashionMNIST_default':
+    elif model_name == 'fashion_mnist_default':
         model = FashionMNISTNet()
     else:
         raise ValueError(f'Unknown dataset: {model_name}')

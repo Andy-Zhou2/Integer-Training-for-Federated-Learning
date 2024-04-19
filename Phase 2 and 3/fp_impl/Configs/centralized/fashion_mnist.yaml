@@ -1,4 +1,4 @@
-dataset: FashionMNIST
+dataset: fashion_mnist
 batch_size: 20
 epochs: 100
 lr: 0.1
