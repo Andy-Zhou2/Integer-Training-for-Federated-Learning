@@ -135,7 +135,8 @@ def simulate(config):
         'gamma': config.gamma,
         'step_size': config.step_size,
         'test_every_epoch': config.test_every_epoch,
-        'verbose': config.train_verbose
+        'verbose': config.train_verbose,
+        'weight_folder': '',  # don't save weights
     }
     train_ratio = config.train_ratio  # proportion of the training set used for training (the rest for validation)
     fraction_fit = config.fraction_fit

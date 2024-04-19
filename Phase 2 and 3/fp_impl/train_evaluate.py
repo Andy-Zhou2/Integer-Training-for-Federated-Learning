@@ -5,6 +5,7 @@ from typing import Dict, Any
 from dataset import ClientDataset
 from torch.optim.lr_scheduler import StepLR
 import logging
+import os
 
 
 def train_one_epoch(model, device, train_loader, optimizer, epoch, verbose):
@@ -79,6 +80,10 @@ def train(model: torch.nn.Module, device: torch.device, data: ClientDataset, con
         train_loss, train_acc = train_one_epoch(model, device, train_loader, optimizer, epoch, config['verbose'])
         result['train_total_loss'].append(train_loss)
         result['train_accuracy'].append(train_acc)
+
+        if config['weight_folder']:  # if '', don't save
+            os.makedirs(config['weight_folder'], exist_ok=True)
+            torch.save(model.state_dict(), f"{config['weight_folder']}/model_{epoch}.pt")
 
         if config['test_every_epoch']:
             if test_loader is None:

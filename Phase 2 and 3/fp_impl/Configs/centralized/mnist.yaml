@@ -7,3 +7,4 @@ step_size: 10  # Learning rate decay step
 seed: 123
 verbose: false
 test_every_epoch: true
+weight_folder: ../data/fp_weights/${dataset}/

@@ -23,6 +23,7 @@ def main(config: DictConfig):
         'step_size': config.step_size,
         'verbose': config.verbose,
         'test_every_epoch': config.test_every_epoch,
+        'weight_folder': config.weight_folder,
     }
 
     set_seed(seed)
