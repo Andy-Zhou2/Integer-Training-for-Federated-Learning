@@ -1,11 +1,10 @@
 from abc import abstractmethod
 
 import numpy as np
-from torchvision import datasets, transforms
 from pktnn_fc import PktFc
 from pktnn_mat import PktMat
 from state import save_state, load_state
-from typing import List
+from typing import List, Union
 
 
 class PktNet:
@@ -134,18 +133,22 @@ class FashionMNISTNet(PktNet):
 
 
 class CustomLinearNet(PktNet):
-    def __init__(self, num_classes: int, dim_input: int, fc_dims: List[int], activation: str):
+    def __init__(self, num_classes: int, dim_input: int, fc_dims: List[int], activation: str,
+                 weight_clip_each_layer: Union[None, List[Union[int, None]]] = None):
         """
         Create a custom linear network. The network will have len(fc_dims) + 1 layers.
         :param num_classes:
         :param dim_input:
         :param fc_dims: The dimensions of the hidden layers.
         :param activation:
+        :param weight_clip_each_layer: The maximum absolute value of the weights for each layer. If None, the weights
+        will be clipped to a default range of [-32767, 32767].
         """
         self.fc_list = []
 
         all_dims = [dim_input] + fc_dims + [num_classes]
         for i in range(len(all_dims) - 1):
+            clip_range = None if weight_clip_each_layer is None else weight_clip_each_layer[i]
             fc = PktFc(all_dims[i], all_dims[i + 1], use_dfa=True, activation=activation)
             self.fc_list.append(fc)
 
