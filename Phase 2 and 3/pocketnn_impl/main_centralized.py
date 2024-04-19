@@ -43,7 +43,8 @@ def main(config: DictConfig):
         'test_every_epoch': config.test_every_epoch,
         'print_hash_every_epoch': config.print_hash_every_epoch,
         'shuffle_dataset_every_epoch': config.shuffle_dataset_every_epoch,
-        'verbose': config.verbose
+        'verbose': config.verbose,
+        'label_target_value': config.label_target_value,
     }
 
     pkt_data = {

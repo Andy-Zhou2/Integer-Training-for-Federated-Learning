@@ -8,3 +8,4 @@ print_hash_every_epoch: true
 shuffle_dataset_every_epoch: true
 verbose: true
 seed: 123
+label_target_value: 15

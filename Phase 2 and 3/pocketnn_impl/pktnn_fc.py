@@ -2,35 +2,32 @@ from pktnn_layer import PktLayer
 from pktnn_mat import PktMat, mat_elem_div_mat, mat_mul_const, mat_elem_mul_mat, transpose_of, \
     mat_div_const, mat_add_mat, deep_copy, mat_mul_mat
 from pktnn_actv import activate
-from pktnn_consts import *
 import numpy as np
 
 
 class PktFc(PktLayer):
     def __init__(self, in_dim: int, out_dim: int, use_dfa: bool = True, activation: str = 'pocket_tanh',
-                 use_bn: bool = False):
+                 use_bn: bool = False, weight_max_absolute: int = 32767, name: str = "fc_noname",
+                 activation_k_bit: int = 8):
         super().__init__()
         self.layer_type = PktLayer.LayerType.POCKET_FC
         self.in_dim: int = in_dim
         self.out_dim: int = out_dim
         self.weight = PktMat(in_dim, out_dim)
         self.bias = PktMat(1, out_dim)
-
-        self.actv_grad_inv = PktMat()
+        self.name = name
+        self.weight_max_absolute = weight_max_absolute
+        self.activation_k_bit = activation_k_bit
 
         self.use_bn = use_bn
-
         self.use_dfa = use_dfa
         self.dfa_weight = PktMat()
 
-        # self.name = "fc_noname"
+        self.actv_grad_inv = PktMat()
+        self.output = PktMat()
+        self.input = PktMat()
         self.activation = activation
 
-        self.output = PktMat()
-        self.rowss = self.in_dim
-        self.colss = self.out_dim
-
-        self.input = PktMat()
 
     def __repr__(self):
         return f"FC Layer: {self.in_dim} -> {self.out_dim}"
@@ -52,14 +49,14 @@ class PktFc(PktLayer):
 
         inter = mat_mul_mat(x, self.weight)
         inter.self_add_mat(self.bias)
-        self.output, self.actv_grad_inv = activate(inter, self.activation, K_BIT, self.in_dim)
+        self.output, self.actv_grad_inv = activate(inter, self.activation, self.activation_k_bit, self.in_dim)
 
         if self.next_layer is not None:
             self.next_layer.forward(self.output)
 
     def set_random_dfa_weight(self, r, c):
         self.dfa_weight.init_zeros(r, c)
-        weight_range = np.int_(np.floor(np.sqrt((12 * SHRT_MAX) / (self.in_dim + self.out_dim))))
+        weight_range = np.int_(np.floor(np.sqrt((12 * self.weight_max_absolute) / (self.in_dim + self.out_dim))))
         self.dfa_weight.set_random(False, -weight_range, weight_range)
 
     def compute_deltas(self, final_layer_delta_mat):
@@ -98,8 +95,8 @@ class PktFc(PktLayer):
         bias_update.self_div_const(-lr_inv)
         self.bias.self_add_mat(bias_update)
 
-        self.weight.clamp_mat(SHRT_MIN + 1, SHRT_MAX)
-        self.bias.clamp_mat(SHRT_MIN + 1, SHRT_MAX)
+        self.weight.clamp_mat(-self.weight_max_absolute, self.weight_max_absolute)
+        self.bias.clamp_mat(-self.weight_max_absolute, self.weight_max_absolute)
 
         if self.prev_layer is not None:
             self.prev_layer.backward(final_layer_delta_mat, lr_inv)

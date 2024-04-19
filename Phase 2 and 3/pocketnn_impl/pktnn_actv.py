@@ -1,5 +1,4 @@
 from pktnn_mat import PktMat
-from pktnn_consts import *
 from calc_util import truncate_divide
 from typing import Tuple
 
@@ -7,11 +6,8 @@ from typing import Tuple
 def pocket_tanh(mat_in: PktMat, k: int, num_items: int) -> Tuple[PktMat, PktMat]:
     mat_out: PktMat = PktMat(mat_in.row, mat_in.col)
     mat_actv_grad_inv: PktMat = PktMat(mat_in.row, mat_in.col)
-    # assert mat_out.dims_equal(mat_in)
-    # if not mat_actv_grad_inv.dims_equal(mat_in):
-    #     mat_actv_grad_inv.init_zeros(mat_in.row, mat_in.col)
-    yMax = PKT_MAX
-    yMin = PKT_MIN
+    yMax = 2 ** (k - 1) - 1
+    yMin = -yMax
     joints = [-127, -74, -31, 32, 75, 128]
     divisor = (1 << k) * num_items
     slopesInv = [yMax, 8, 2, 1, 2, 8, yMax]

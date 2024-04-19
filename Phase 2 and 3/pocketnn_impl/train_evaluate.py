@@ -2,7 +2,6 @@ import numpy as np
 from network import PktNet
 from typing import Dict, Any, Tuple, Optional, List
 from pktnn_mat import PktMat
-from pktnn_consts import UNSIGNED_4BIT_MAX
 from pktnn_loss import batch_l2_loss_delta
 import os
 import logging
@@ -41,7 +40,7 @@ def pktnn_train(net: PktNet, data: Dict[str, Tuple[np.ndarray, np.ndarray]], con
 
     train_target_mat = PktMat(num_train_samples, num_classes)
     for r in range(num_train_samples):
-        train_target_mat[r][train_labels[r]] = UNSIGNED_4BIT_MAX
+        train_target_mat[r][train_labels[r]] = config['label_target_value']
 
     EPOCH = config['epochs']
     BATCH_SIZE = config['batch_size']  # too big could cause overflow

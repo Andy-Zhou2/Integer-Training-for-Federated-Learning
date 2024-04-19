@@ -17,3 +17,4 @@ dataset_dirichlet_alpha: 1  # choose between {0.1, 1, 1000}
 model_name: mnist_default
 use_wandb: false
 train_verbose: false
+label_target_value: 15
