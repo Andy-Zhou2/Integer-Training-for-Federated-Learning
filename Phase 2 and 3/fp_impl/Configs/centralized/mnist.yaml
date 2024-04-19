@@ -1,0 +1,9 @@
+dataset: MNIST
+batch_size: 20
+epochs: 100
+lr: 0.1
+gamma: 0.5  # Learning rate decay
+step_size: 10  # Learning rate decay step
+seed: 123
+verbose: false
+test_every_epoch: true
