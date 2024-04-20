@@ -6,6 +6,7 @@ import hydra
 from omegaconf import DictConfig, OmegaConf
 import logging
 from utils_random import set_seed
+import shutil
 
 
 @hydra.main(config_path='Configs/centralized', config_name='mnist', version_base='1.2')
@@ -20,10 +21,13 @@ def main(config: DictConfig):
 
     # create folder
     weight_folder = config.weight_folder
-    os.makedirs(weight_folder, exist_ok=True)
+    if weight_folder:
+        if os.path.exists(weight_folder):
+            shutil.rmtree(weight_folder)
+        os.makedirs(weight_folder, exist_ok=True)
 
     logging.info('Creating model')
-    net = get_net(dataset_name + '_default')
+    net = get_net(config.model_name)
 
     # initial testing
     # logging.info('Initial testing')

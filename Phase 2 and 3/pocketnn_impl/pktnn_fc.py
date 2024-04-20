@@ -30,7 +30,7 @@ class PktFc(PktLayer):
 
 
     def __repr__(self):
-        return f"FC Layer: {self.in_dim} -> {self.out_dim}"
+        return f"FC Layer: {self.in_dim} -> {self.out_dim} with clip {self.weight_max_absolute}"
 
     def batch_normalization(self):
         raise NotImplementedError

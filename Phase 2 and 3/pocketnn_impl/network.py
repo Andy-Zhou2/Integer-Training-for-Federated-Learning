@@ -5,6 +5,7 @@ from pktnn_fc import PktFc
 from pktnn_mat import PktMat
 from state import save_state, load_state
 from typing import List, Union
+import re
 
 
 class PktNet:
@@ -48,93 +49,9 @@ class PktNet:
         return parameters
 
 
-class MNISTNet(PktNet):
-    def __init__(self):
-        num_classes = 10
-        mnist_rows = 28
-        mnist_cols = 28
-
-        dim_input = mnist_rows * mnist_cols
-
-        fc_dim1 = 100
-        fc_dim2 = 50
-        activation = 'pocket_tanh'
-
-        fc1 = PktFc(dim_input, fc_dim1, use_dfa=True, activation=activation)
-        fc2 = PktFc(fc_dim1, fc_dim2, use_dfa=True, activation=activation)
-        fc_last = PktFc(fc_dim2, num_classes, use_dfa=True, activation=activation)
-
-        fc1.set_next_layer(fc2)
-        fc2.set_next_layer(fc_last)
-
-        self.fc1 = fc1
-        self.fc2 = fc2
-        self.fc_last = fc_last
-
-    def forward(self, x: PktMat) -> PktMat:
-        self.fc1.forward(x)
-        return self.fc_last.output
-
-    def backward(self, loss_delta_mat: PktMat, lr_inv: np.int_):
-        self.fc_last.backward(loss_delta_mat, lr_inv)
-
-    def save(self, filename: str):
-        save_state([self.fc1, self.fc2, self.fc_last], filename)
-
-    def load(self, filename: str):
-        load_state([self.fc1, self.fc2, self.fc_last], filename)
-
-    def get_fc_list(self) -> List[PktFc]:
-        return [self.fc1, self.fc2, self.fc_last]
-
-
-class FashionMNISTNet(PktNet):
-    def __init__(self):
-        num_classes = 10
-        mnist_rows = 28
-        mnist_cols = 28
-
-        dim_input = mnist_rows * mnist_cols
-
-        fc_dim1 = 200
-        fc_dim2 = 100
-        fc_dim3 = 50
-        activation = 'pocket_tanh'
-
-        fc1 = PktFc(dim_input, fc_dim1, use_dfa=True, activation=activation)
-        fc2 = PktFc(fc_dim1, fc_dim2, use_dfa=True, activation=activation)
-        fc3 = PktFc(fc_dim2, fc_dim3, use_dfa=True, activation=activation)
-        fc_last = PktFc(fc_dim3, num_classes, use_dfa=True, activation=activation)
-
-        fc1.set_next_layer(fc2)
-        fc2.set_next_layer(fc3)
-        fc3.set_next_layer(fc_last)
-
-        self.fc1 = fc1
-        self.fc2 = fc2
-        self.fc3 = fc3
-        self.fc_last = fc_last
-
-    def forward(self, x: PktMat) -> PktMat:
-        self.fc1.forward(x)
-        return self.fc_last.output
-
-    def backward(self, loss_delta_mat: PktMat, lr_inv: np.int_):
-        self.fc_last.backward(loss_delta_mat, lr_inv)
-
-    def save(self, filename: str):
-        save_state([self.fc1, self.fc2, self.fc3, self.fc_last], filename)
-
-    def load(self, filename: str):
-        load_state([self.fc1, self.fc2, self.fc3, self.fc_last], filename)
-
-    def get_fc_list(self) -> List[PktFc]:
-        return [self.fc1, self.fc2, self.fc3, self.fc_last]
-
-
-class CustomLinearNet(PktNet):
+class LinearNet(PktNet):
     def __init__(self, num_classes: int, dim_input: int, fc_dims: List[int], activation: str,
-                 weight_clip_each_layer: Union[None, List[Union[int, None]]] = None):
+                 weight_clip_each_layer: Union[None, List[int]] = None):
         """
         Create a custom linear network. The network will have len(fc_dims) + 1 layers.
         :param num_classes:
@@ -148,8 +65,9 @@ class CustomLinearNet(PktNet):
 
         all_dims = [dim_input] + fc_dims + [num_classes]
         for i in range(len(all_dims) - 1):
-            clip_range = None if weight_clip_each_layer is None else weight_clip_each_layer[i]
-            fc = PktFc(all_dims[i], all_dims[i + 1], use_dfa=True, activation=activation)
+            clip_range = 32767 if weight_clip_each_layer is None else weight_clip_each_layer[i]
+            fc = PktFc(all_dims[i], all_dims[i + 1], use_dfa=True, activation=activation,
+                       weight_max_absolute=clip_range)
             self.fc_list.append(fc)
 
         for i in range(len(self.fc_list) - 1):
@@ -171,19 +89,52 @@ class CustomLinearNet(PktNet):
     def get_fc_list(self) -> List[PktFc]:
         return self.fc_list
 
+    def __repr__(self):
+        return f'LinearNet({self.fc_list})'
+
 
 def get_net(model_name: str) -> PktNet:
-    if model_name == 'mnist_default':
-        return MNISTNet()
-    elif model_name == 'fashion_mnist_default':
-        return FashionMNISTNet()
+    """
+    Model name consists of two parts, specifying the model and the clip ranges respectively.
+    Model name could be mnist_default, fashion_mnist_default, or [200,100] with no space.
+    Clip ranges are optional, and consists of a list of integers with no space.
+    """
+    pattern = r'^(\[[0-9,]*\]|mnist_default|fashion_mnist_default)( \[[0-9,]*\])?$'
+    match = re.match(pattern, model_name)
+    if not match:
+        raise ValueError(f'Invalid model name: {model_name}')
 
-    elif model_name.startswith('custom '):  # for example, custom [200, 100]
-        model_name = model_name[model_name.find('[') + 1: model_name.find(']')].split(',')
-        if len(model_name) == 1 and model_name[0] == '':
-            model_name = []
-        else:
-            model_name = [int(x) for x in model_name]
-        return CustomLinearNet(num_classes=10, dim_input=28 * 28, fc_dims=model_name, activation='pocket_tanh')
+    architecture, clip_ranges = match.groups()
+
+    if clip_ranges is not None:
+        clip_ranges = eval(clip_ranges)  # None if not provided
+
+    if architecture == 'mnist_default':
+        dims = [100, 50]
+    elif architecture == 'fashion_mnist_default':
+        dims = [200, 100]
     else:
-        raise ValueError('Invalid dataset name')
+        dims = eval(architecture)
+
+    if clip_ranges is not None:
+        assert len(dims) == len(clip_ranges) - 1, "Number of clip ranges and layers do not match."
+
+    return LinearNet(num_classes=10, dim_input=28 * 28, fc_dims=dims, activation='pocket_tanh',
+                     weight_clip_each_layer=clip_ranges)
+
+
+if __name__ == '__main__':
+    test_strings = [
+        "mnist_default",
+        "fashion_mnist_default",
+        "fashion_mnist_default [10,20,30]",
+        "[1,2,3] [5,6,7,8]",
+        "[] [10]",
+        "[1,2,3]",
+    ]
+
+    for test in test_strings:
+        print(f"Model name: {test}")
+        net = get_net(test)
+        print(net)
+        print()

@@ -2,10 +2,11 @@ dataset: fashion_mnist  # choose between {mnist, fashion_mnist}
 epochs: 1000
 batch_size: 20
 initial_lr_inv: 1000
-weight_folder: ../data/weights/${dataset}
+weight_folder: ../data/weights/${dataset}_${model_name}
 test_every_epoch: true
 print_hash_every_epoch: true
 shuffle_dataset_every_epoch: true
 verbose: true
 seed: 123
 label_target_value: 15
+model_name: fashion_mnist_default
