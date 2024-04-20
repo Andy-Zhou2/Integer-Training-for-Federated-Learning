@@ -61,11 +61,7 @@ class FlowerClient(fl.client.NumPyClient):
 
 def client_fn(cid: str, model_name: str, client_datasets: List[ClientDataset], seed: int):
     set_seed(seed)
-    # Load model
     net = get_net(model_name).to(device)
-    # sum param weights
-    net_sum = sum(p.sum() for p in net.parameters())
-    print(f"Client {cid} model sum of weights: {net_sum}")
     cid_int = int(cid)
     client_dataset = client_datasets[cid_int]
 
