@@ -74,13 +74,14 @@ class PktMat:
         pkt_mat.mat.fill(value)
         return pkt_mat
 
-    def __init__(self, row=0, col=0):
+    def __init__(self, row=0, col=0, mat=None):
         self.mat = None
         self.init_zeros(row, col)  # self.mat initialized to zeros
 
-        # self.prev_layer = None
-        # self.next_layer = None
-        # self.dummy3d = None
+        if mat is not None:
+            assert row == mat.shape[0] and col == mat.shape[1]
+            assert mat.dtype == np.int64
+            self.mat = mat
 
     def __getitem__(self, key):
         # does not need __setitem__ because we can use self.mat[key] = value

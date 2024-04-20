@@ -1,6 +1,7 @@
 from pktnn_mat import PktMat
 from calc_util import truncate_divide
 from typing import Tuple
+import numpy as np
 
 
 def pocket_tanh(mat_in: PktMat, k: int, num_items: int) -> Tuple[PktMat, PktMat]:
@@ -12,35 +13,28 @@ def pocket_tanh(mat_in: PktMat, k: int, num_items: int) -> Tuple[PktMat, PktMat]
     divisor = (1 << k) * num_items
     slopesInv = [yMax, 8, 2, 1, 2, 8, yMax]
 
-    for r in range(mat_out.row):
-        for c in range(mat_out.col):
-            x = truncate_divide(mat_in[r, c], divisor)
-            if x < joints[0]:
-                mat_out[r, c] = yMin
-                mat_actv_grad_inv[r, c] = slopesInv[0]
-            elif x < joints[1]:
-                y = truncate_divide(x, 4) - 88
-                mat_out[r, c] = y
-                mat_actv_grad_inv[r, c] = slopesInv[1]
-            elif x < joints[2]:
-                y = x - 32
-                mat_out[r, c] = y
-                mat_actv_grad_inv[r, c] = slopesInv[2]
-            elif x < joints[3]:
-                y = 2 * x
-                mat_out[r, c] = y
-                mat_actv_grad_inv[r, c] = slopesInv[3]
-            elif x < joints[4]:
-                y = x + 32
-                mat_out[r, c] = y
-                mat_actv_grad_inv[r, c] = slopesInv[4]
-            elif x < joints[5]:
-                y = truncate_divide(x, 4) + 88
-                mat_out[r, c] = y
-                mat_actv_grad_inv[r, c] = slopesInv[5]
-            else:
-                mat_out[r, c] = yMax
-                mat_actv_grad_inv[r, c] = slopesInv[6]
+    x = truncate_divide(mat_in.mat, divisor)
+    conditions = [
+        x < joints[0],
+        (x >= joints[0]) & (x < joints[1]),
+        (x >= joints[1]) & (x < joints[2]),
+        (x >= joints[2]) & (x < joints[3]),
+        (x >= joints[3]) & (x < joints[4]),
+        (x >= joints[4]) & (x < joints[5]),
+        x >= joints[5]
+    ]
+    calculations = [
+        np.full(mat_in.mat.shape, yMin, dtype=int),
+        truncate_divide(x, 4) - 88,
+        x - 32,
+        2 * x,
+        x + 32,
+        truncate_divide(x, 4) + 88,
+        np.full(mat_in.mat.shape, yMax, dtype=int)
+    ]
+    mat_out.mat = np.select(conditions, calculations)
+    mat_actv_grad_inv.mat = np.select(conditions, slopesInv)
+
     return mat_out, mat_actv_grad_inv
 
 
