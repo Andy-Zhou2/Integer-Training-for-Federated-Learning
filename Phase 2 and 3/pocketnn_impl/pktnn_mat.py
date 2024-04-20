@@ -122,17 +122,17 @@ class PktMat:
         self.mat = mat_elem_mul_mat(other, temp).mat
 
     def set_random(self, allow_zero: bool, min_val: int, max_val: int):
-        # self.mat = np.random.randint(min_val, max_val, size=(self.row, self.col), dtype=np.int64)
-        # if not allow_zero:
-        #     self.mat += (self.mat == 0)
+        self.mat = np.random.randint(min_val, max_val, size=(self.row, self.col), dtype=np.int64)
+        if not allow_zero:
+            self.mat += (self.mat == 0)
 
         # to ensure reproducibility which agrees with C++: (considering the seeding at the top of the file)
-        for r in range(self.row):
-            for c in range(self.col):
-                self.mat[r][c] = rand_range(min_val, max_val)
-                if not allow_zero:
-                    while self.mat[r][c] == 0:
-                        self.mat[r][c] = rand_range(min_val, max_val)
+        # for r in range(self.row):
+        #     for c in range(self.col):
+        #         self.mat[r][c] = rand_range(min_val, max_val)
+        #         if not allow_zero:
+        #             while self.mat[r][c] == 0:
+        #                 self.mat[r][c] = rand_range(min_val, max_val)
 
     def hash(self):
         def simple_hash(string):
