@@ -9,4 +9,4 @@ shuffle_dataset_every_epoch: true
 verbose: true
 seed: 123
 label_target_value: 15
-model_name: mnist_default
+model_name: mnist_default #[31,40000,40000]
