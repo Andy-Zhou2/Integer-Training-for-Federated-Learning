@@ -3,6 +3,7 @@ from pktnn_mat import PktMat, mat_elem_div_mat, mat_mul_const, mat_elem_mul_mat,
     mat_div_const, mat_add_mat, deep_copy, mat_mul_mat
 from pktnn_actv import activate
 import numpy as np
+import logging
 
 
 class PktFc(PktLayer):
@@ -57,6 +58,9 @@ class PktFc(PktLayer):
     def set_random_dfa_weight(self, r, c):
         self.dfa_weight.init_zeros(r, c)
         weight_range = np.int_(np.floor(np.sqrt((12 * self.weight_max_absolute) / (self.in_dim + self.out_dim))))
+        if weight_range == 0:
+            weight_range = 1
+            logging.warning(f"Weight range is 0 for layer {self.name}. Setting to 1.")
         self.dfa_weight.set_random(False, -weight_range, weight_range)
 
     def compute_deltas(self, final_layer_delta_mat):
