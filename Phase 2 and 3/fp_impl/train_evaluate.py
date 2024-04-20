@@ -44,7 +44,7 @@ def evaluate_model(model, device, test_loader, verbose=True):
     correct = 0
     with torch.no_grad():
         for batch in test_loader:
-            data = batch['image'];
+            data = batch['image']
             target = batch['label']
             data, target = data.to(device), target.to(device)
             output = model(data)

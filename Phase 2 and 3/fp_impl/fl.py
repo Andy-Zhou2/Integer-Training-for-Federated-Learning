@@ -40,7 +40,6 @@ class FlowerClient(fl.client.NumPyClient):
         return get_parameters(self.net)
 
     def fit(self, parameters: NDArrays, config: Dict[str, Any]):
-        set_seed(self.seed)
 
         set_parameters(self.net, parameters)
         train(self.net, device, self.client_dataset, config=config | {'cid': self.cid})
@@ -61,8 +60,12 @@ class FlowerClient(fl.client.NumPyClient):
 
 
 def client_fn(cid: str, model_name: str, client_datasets: List[ClientDataset], seed: int):
+    set_seed(seed)
     # Load model
-    net = get_net(model_name)
+    net = get_net(model_name).to(device)
+    # sum param weights
+    net_sum = sum(p.sum() for p in net.parameters())
+    print(f"Client {cid} model sum of weights: {net_sum}")
     cid_int = int(cid)
     client_dataset = client_datasets[cid_int]
 
@@ -110,7 +113,7 @@ def federated_evaluation_function(model_name: str, test_dataset: DataLoader,
                                   server_round: int, parameters: NDArrays, fed_eval_config: Dict[str, Any],
                                   use_wandb: bool = False):
     """returns (loss, dict of results)"""
-    net = get_net(model_name)
+    net = get_net(model_name).to(device)
     set_parameters(net, parameters)
     loss, accuracy = evaluate_model(net, device, test_dataset)
     if use_wandb:
