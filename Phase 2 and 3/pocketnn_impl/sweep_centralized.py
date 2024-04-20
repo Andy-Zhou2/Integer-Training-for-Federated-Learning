@@ -56,10 +56,13 @@ def agent_sweep():
         logging.info(result)
 
         for epoch in range(config['epochs']):
-            wandb.log({'loss': result['loss'][epoch]})
-            wandb.log({'train_accuracy': result['train_accuracy'][epoch]})
-            if result['test_accuracy']:  # not empty
-                wandb.log({'test_accuracy': result['test_accuracy'][epoch]})
+            report = {
+                'loss': result['loss'][epoch],
+                'train_accuracy': result['train_accuracy'][epoch],
+            }
+            if result['test_accuracy']:
+                report['test_accuracy'] = result['test_accuracy'][epoch]
+            wandb.log(report)
 
         max_acc = max(result['test_accuracy'])
 
@@ -67,5 +70,5 @@ def agent_sweep():
 
 
 if __name__ == '__main__':
-    wandb.agent(sweep_id='xz2txrta', function=agent_sweep,
+    wandb.agent(sweep_id='gf3jxv34', function=agent_sweep,
                 project='part ii diss', entity='wz337', count=100)

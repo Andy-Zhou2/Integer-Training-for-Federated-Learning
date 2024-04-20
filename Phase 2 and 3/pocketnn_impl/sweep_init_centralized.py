@@ -17,17 +17,17 @@ parameters_dict = {
     },
     'batch_size': {
         'distribution': 'int_uniform',
-        'min': 1,
+        'min': 2,
         'max': 40
     },
     'layer_1_bw': {  # using mnist_default
         'distribution': 'int_uniform',
-        'min': 1,
+        'min': 2,
         'max': 16
     },
     'layer_2_bw': {
         'distribution': 'int_uniform',
-        'min': 1,
+        'min': 2,
         'max': 16
     },
     'layer_3_bw': {
