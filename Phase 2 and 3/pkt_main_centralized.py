@@ -1,7 +1,7 @@
 import os
 from src.pktnn.pkt_network import get_net
 from src.pktnn.train_evaluate import pktnn_train
-from src.dataset.dataset import get_dataset
+from src.dataset.pkt_dataset import get_centralized_dataloader_pkt
 import hydra
 from omegaconf import DictConfig, OmegaConf
 import logging
@@ -17,7 +17,7 @@ def main(config: DictConfig):
     dataset_name = config.dataset
     assert dataset_name in ['mnist', 'fashion_mnist']
 
-    train_data, test_data = get_dataset(dataset_name)
+    train_data, test_data = get_centralized_dataloader_pkt(dataset_name)
 
     # create folder
     weight_folder = config.weight_folder

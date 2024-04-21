@@ -9,7 +9,7 @@ import wandb
 
 from .strategy import FedAvgInt
 from ..pktnn.pkt_network import get_net, PktNet
-from ..dataset.dataset import DatasetTuple, load_dataset, ClientDataset
+from ..dataset.pkt_dataset import DatasetTuple, load_federated_dataset_pkt, ClientDataset
 from ..pktnn.train_evaluate import pktnn_train, pktnn_evaluate
 from ..utils.utils_random import generate_rng, DeterministicClientManager, set_seed
 
@@ -133,7 +133,7 @@ def simulate(config):
 
     _, client_cid_rng, _ = generate_rng(global_seed)
 
-    client_datasets, test_dataset = load_dataset(dataset_name, dataset_dirichlet_alpha, num_clients, train_ratio)
+    client_datasets, test_dataset = load_federated_dataset_pkt(dataset_name, dataset_dirichlet_alpha, num_clients, train_ratio)
 
     client_manager = DeterministicClientManager(client_cid_rng, enable_resampling=False)
 

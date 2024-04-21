@@ -5,7 +5,7 @@ import numbers
 
 import flwr as fl
 from ..fp.network import get_net
-from ..dataset.fp_dataset import load_federated_dataset, ClientDataset
+from ..dataset.fp_dataset import load_federated_dataset_fp, ClientDataset
 from torch.utils.data import DataLoader
 from flwr.common.typing import NDArrays
 from ..fp.train_evaluate import train, evaluate_model
@@ -144,8 +144,8 @@ def simulate(config):
 
     _, client_cid_rng, _ = generate_rng(global_seed)
 
-    client_datasets, test_dataset = load_federated_dataset(dataset_name, dataset_dirichlet_alpha, num_clients,
-                                                           train_ratio, batch_size, shuffle=True)
+    client_datasets, test_dataset = load_federated_dataset_fp(dataset_name, dataset_dirichlet_alpha, num_clients,
+                                                              train_ratio, batch_size, shuffle=True)
 
     client_manager = DeterministicClientManager(client_cid_rng, enable_resampling=False)
 

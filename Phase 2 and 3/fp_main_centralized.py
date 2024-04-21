@@ -3,7 +3,7 @@ import hydra
 from omegaconf import DictConfig, OmegaConf
 import logging
 
-from src.dataset.fp_dataset import get_centralized_dataloader
+from src.dataset.fp_dataset import get_centralized_dataloader_fp
 from src.fp.network import get_net
 from src.fp.train_evaluate import train
 from src.utils.utils_random import set_seed
@@ -34,7 +34,7 @@ def main(config: DictConfig):
     model = get_net(dataset + '_default').to(device)
 
     # Data loading
-    train_loader, test_loader = get_centralized_dataloader(dataset, batch_size)
+    train_loader, test_loader = get_centralized_dataloader_fp(dataset, batch_size)
 
     data = {
         'train': train_loader,
