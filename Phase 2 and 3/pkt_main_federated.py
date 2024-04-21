@@ -1,11 +1,11 @@
-from fl import simulate
+from src.fl.pkt_fl import simulate
 from omegaconf import DictConfig, OmegaConf
 import hydra
 from flwr.common.logger import log
 import logging
 
 
-@hydra.main(config_path='Configs/FL', config_name='mnist', version_base='1.2')
+@hydra.main(config_path='configs/pktnn/fl', config_name='mnist', version_base='1.2')
 def main(config: DictConfig):
     log(logging.INFO, OmegaConf.to_yaml(config))
 

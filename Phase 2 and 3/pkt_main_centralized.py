@@ -9,7 +9,7 @@ from src.utils.utils_random import set_seed
 import shutil
 
 
-@hydra.main(config_path='Configs/centralized', config_name='mnist', version_base='1.2')
+@hydra.main(config_path='configs/pktnn/centralized', config_name='mnist', version_base='1.2')
 def main(config: DictConfig):
     logging.info(OmegaConf.to_yaml(config))
     logging.info('Loading data')

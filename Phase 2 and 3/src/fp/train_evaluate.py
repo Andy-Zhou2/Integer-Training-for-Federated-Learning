@@ -2,11 +2,11 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 from typing import Dict, Any
-from dataset import ClientDataset
 from torch.optim.lr_scheduler import StepLR
 import logging
 import os
 
+from ..dataset.fp_dataset import ClientDataset
 
 def train_one_epoch(model, device, train_loader, optimizer, epoch, verbose):
     model.train()

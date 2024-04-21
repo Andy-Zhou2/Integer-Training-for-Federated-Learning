@@ -1,4 +1,4 @@
-from .pktnn_mat import PktMat
+from .pkt_mat import PktMat
 from ..utils.utils_calc import truncate_divide
 from typing import Tuple
 import numpy as np

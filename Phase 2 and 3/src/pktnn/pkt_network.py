@@ -2,8 +2,8 @@ from abc import abstractmethod
 import numpy as np
 import re
 
-from .pktnn_fc import PktFc
-from .pktnn_mat import PktMat
+from .pkt_fc import PktFc
+from .pkt_mat import PktMat
 from .pkt_state import save_state, load_state
 from typing import List, Union
 

@@ -1,14 +1,15 @@
 import torch
-from dataset import get_centralized_dataloader
-from network import get_net
-from train_evaluate import train_one_epoch, evaluate_model, train
 import hydra
 from omegaconf import DictConfig, OmegaConf
 import logging
-from utils_random import set_seed
+
+from src.dataset.fp_dataset import get_centralized_dataloader
+from src.fp.network import get_net
+from src.fp.train_evaluate import train
+from src.utils.utils_random import set_seed
 
 
-@hydra.main(config_path='Configs/centralized', config_name='mnist', version_base='1.2')
+@hydra.main(config_path='configs/fp/centralized', config_name='mnist', version_base='1.2')
 def main(config: DictConfig):
     logging.info(OmegaConf.to_yaml(config))
 

@@ -1,7 +1,7 @@
-from .pktnn_layer import PktLayer
-from .pktnn_mat import PktMat, mat_elem_div_mat, mat_mul_const, mat_elem_mul_mat, transpose_of, \
+from .pkt_layer import PktLayer
+from .pkt_mat import PktMat, mat_elem_div_mat, mat_mul_const, mat_elem_mul_mat, transpose_of, \
     mat_div_const, mat_add_mat, deep_copy, mat_mul_mat
-from .pktnn_actv import activate
+from .pkt_actv import activate
 import numpy as np
 import logging
 

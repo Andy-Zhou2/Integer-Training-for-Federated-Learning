@@ -1,4 +1,4 @@
-from .pktnn_fc import PktFc
+from .pkt_fc import PktFc
 from typing import List
 import numpy as np
 

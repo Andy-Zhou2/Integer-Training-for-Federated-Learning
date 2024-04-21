@@ -1,5 +1,4 @@
-from torchvision import datasets, transforms
-import torch
+from torchvision import transforms
 from torch.utils.data import DataLoader
 from typing import Tuple, List, Union, Dict
 from flwr_datasets import FederatedDataset
