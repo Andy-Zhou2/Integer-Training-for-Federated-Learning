@@ -1,11 +1,11 @@
 from abc import abstractmethod
-
 import numpy as np
-from pktnn_fc import PktFc
-from pktnn_mat import PktMat
-from state import save_state, load_state
-from typing import List, Union
 import re
+
+from .pktnn_fc import PktFc
+from .pktnn_mat import PktMat
+from .pkt_state import save_state, load_state
+from typing import List, Union
 
 
 class PktNet:

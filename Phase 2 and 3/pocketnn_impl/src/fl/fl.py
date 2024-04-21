@@ -1,18 +1,18 @@
 import numpy as np
-from typing import List, Tuple, Dict, Any
+from typing import List, Dict, Any
 import random
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 import numbers
-
 import flwr as fl
-from network import get_net
-from dataset import get_dataset, DatasetTuple, load_dataset, ClientDataset
-from network import PktNet
-from flwr.common.typing import NDArrays, NDArrayInt
-from train_evaluate import pktnn_train, pktnn_evaluate
-from strategy import FedAvgInt
+from flwr.common.typing import NDArrays
 import wandb
-from utils_random import generate_rng, DeterministicClientManager, set_seed
+
+from .strategy import FedAvgInt
+from ..pktnn.pkt_network import get_net, PktNet
+from ..dataset.dataset import DatasetTuple, load_dataset, ClientDataset
+from ..pktnn.train_evaluate import pktnn_train, pktnn_evaluate
+from ..utils.utils_random import generate_rng, DeterministicClientManager, set_seed
+
 
 
 class FlowerClient(fl.client.NumPyClient):

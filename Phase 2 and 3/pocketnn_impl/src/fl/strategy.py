@@ -1,7 +1,6 @@
 import numpy as np
 import flwr as fl
-from typing import Callable, Dict, List, Optional, Tuple, Union
-
+from typing import Dict, List, Optional, Tuple, Union
 from flwr.common import (
     FitRes,
     Parameters,
@@ -11,10 +10,10 @@ from flwr.common import (
     NDArrays
 )
 from flwr.server.client_proxy import ClientProxy
-import logging
 from logging import WARNING
 from flwr.common.logger import log
-from calc_util import truncate_divide
+
+from ..utils.utils_calc import truncate_divide
 
 
 def aggregate(results: List[Tuple[ClientProxy, FitRes]]) -> NDArrays:

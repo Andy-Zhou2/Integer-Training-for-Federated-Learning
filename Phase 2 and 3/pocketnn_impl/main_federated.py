@@ -1,5 +1,4 @@
-from fl import simulate
-from types import SimpleNamespace
+from src.fl.fl import simulate
 from omegaconf import DictConfig, OmegaConf
 import hydra
 from flwr.common.logger import log

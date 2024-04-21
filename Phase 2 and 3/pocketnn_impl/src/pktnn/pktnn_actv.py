@@ -1,5 +1,5 @@
-from pktnn_mat import PktMat
-from calc_util import truncate_divide
+from .pktnn_mat import PktMat
+from ..utils.utils_calc import truncate_divide
 from typing import Tuple
 import numpy as np
 

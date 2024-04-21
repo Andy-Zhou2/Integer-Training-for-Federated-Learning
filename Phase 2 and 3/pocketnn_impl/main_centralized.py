@@ -1,11 +1,11 @@
 import os
-from network import get_net
-from train_evaluate import pktnn_train, pktnn_evaluate
-from dataset import get_dataset
+from src.pktnn.pkt_network import get_net
+from src.pktnn.train_evaluate import pktnn_train
+from src.dataset.dataset import get_dataset
 import hydra
 from omegaconf import DictConfig, OmegaConf
 import logging
-from utils_random import set_seed
+from src.utils.utils_random import set_seed
 import shutil
 
 

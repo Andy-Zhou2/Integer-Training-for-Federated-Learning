@@ -1,4 +1,4 @@
-from pktnn_mat import PktMat
+from .pktnn_mat import PktMat
 
 
 def batch_l2_loss_delta(y_mat: PktMat, y_hat_mat: PktMat):

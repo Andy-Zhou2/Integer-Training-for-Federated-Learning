@@ -1,5 +1,4 @@
-from pktnn_fc import PktFc
-from pktnn_mat import PktMat
+from .pktnn_fc import PktFc
 from typing import List
 import numpy as np
 

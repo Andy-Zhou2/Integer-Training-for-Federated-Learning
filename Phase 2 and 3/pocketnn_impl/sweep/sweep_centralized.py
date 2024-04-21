@@ -1,11 +1,13 @@
-import wandb
+import sys
 import os
-from network import get_net
-from train_evaluate import pktnn_train, pktnn_evaluate
-from dataset import get_dataset
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+import wandb
 import logging
-from utils_random import set_seed
-import shutil
+from src.pktnn.pkt_network import get_net
+from src.pktnn.train_evaluate import pktnn_train
+from src.dataset.dataset import get_dataset
+from src.utils.utils_random import set_seed
 
 
 def agent_sweep():

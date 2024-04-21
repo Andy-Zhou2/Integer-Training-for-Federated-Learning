@@ -1,8 +1,8 @@
 import numpy as np
-from network import PktNet
-from typing import Dict, Any, Tuple, Optional, List
-from pktnn_mat import PktMat
-from pktnn_loss import batch_l2_loss_delta
+from .pkt_network import PktNet
+from typing import Dict, Any, Tuple, List
+from .pktnn_mat import PktMat
+from .pktnn_loss import batch_l2_loss_delta
 import os
 import logging
 

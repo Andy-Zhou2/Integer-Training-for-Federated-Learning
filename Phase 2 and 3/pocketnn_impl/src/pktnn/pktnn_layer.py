@@ -1,4 +1,4 @@
-from pktnn_mat import PktMat
+from .pktnn_mat import PktMat
 
 
 class PktLayer:

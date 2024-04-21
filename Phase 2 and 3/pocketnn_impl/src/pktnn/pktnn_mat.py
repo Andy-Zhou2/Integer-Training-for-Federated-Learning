@@ -1,5 +1,5 @@
 import numpy as np
-from calc_util import truncate_divide
+from ..utils.utils_calc import truncate_divide
 
 
 def rand_range(lower: int, upper: int):

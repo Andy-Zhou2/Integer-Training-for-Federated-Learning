@@ -1,11 +1,13 @@
-from fl import simulate
-import wandb
+import sys
 import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+import wandb
+from src.fl.fl import simulate
 
 
 def agent_sweep():
     with wandb.init():
-
         custom_name = f'p{wandb.config.fraction_fit}_lr{wandb.config.lr_inv}_bs{wandb.config.batch_size}_ep{wandb.config.epochs}_alpha{wandb.config.dataset_dirichlet_alpha}_model{wandb.config.model_name}'
         wandb.run.name = custom_name
 
