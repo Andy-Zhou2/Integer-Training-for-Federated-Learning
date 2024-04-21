@@ -1,9 +1,5 @@
-import sys
-import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 import wandb
-from src.fl.fl import simulate
+from src.fl.pkt_fl import simulate
 
 
 def agent_sweep():
