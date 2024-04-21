@@ -1,34 +1,27 @@
 import numpy as np
-from torchvision import datasets, transforms
 from typing import List, Tuple
 from typing import Union, Dict
 from flwr_datasets import FederatedDataset
 from flwr_datasets.partitioner import InnerDirichletPartitioner
 
-# typing for dataset tuple
 DatasetTuple = Tuple[np.ndarray, np.ndarray]
 
 
 def get_dataset(dataset_name: str) -> Tuple[DatasetTuple, DatasetTuple]:
     assert dataset_name in ['mnist', 'fashion_mnist']
 
-    if dataset_name == 'mnist':
-        dataset_train = datasets.MNIST('../data', train=True,
-                                       download=True)
-        dataset_test = datasets.MNIST('../data', train=False,
-                                      download=True)
-    elif dataset_name == 'fashion_mnist':
-        dataset_train = datasets.FashionMNIST('../data', train=True,
-                                              download=True)
-        dataset_test = datasets.FashionMNIST('../data', train=False,
-                                             download=True)
-    else:  # should not reach here
+    if dataset_name.lower() == 'mnist':
+        dataset = FederatedDataset(dataset="mnist", partitioners={})  # No partitioning
+    elif dataset_name.lower() == 'fashion_mnist':
+        dataset = FederatedDataset(dataset="fashion_mnist", partitioners={})  # No partitioning
+    else:
         raise ValueError('Invalid dataset name')
 
-    train_images = dataset_train.data.numpy().reshape(-1, 28 * 28)
-    train_labels = dataset_train.targets.numpy()
-    test_images = dataset_test.data.numpy().reshape(-1, 28 * 28)
-    test_labels = dataset_test.targets.numpy()
+    train_dataset = dataset.load_split('train').with_format('numpy')
+    train_images, train_labels = train_dataset['image'].reshape(-1, 28 * 28), train_dataset['label']
+
+    test_dataset = dataset.load_split('test').with_format('numpy')
+    test_images, test_labels = test_dataset['image'].reshape(-1, 28 * 28), test_dataset['label']
 
     train_data = (train_images, train_labels)
     test_data = (test_images, test_labels)
