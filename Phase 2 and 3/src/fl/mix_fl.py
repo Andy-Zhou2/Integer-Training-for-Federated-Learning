@@ -117,8 +117,8 @@ def simulate(config):
                                                                  parameters, {}, use_wandb),
         min_fit_clients=num_fit_clients,
         initial_parameters=init_parameters,
-        fp_weight_independence=True,
-        pkt_weight_independence=True
+        fp_weight_independence=False,
+        pkt_weight_independence=False
     )
 
     # Start simulation
