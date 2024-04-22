@@ -112,7 +112,7 @@ def get_net(model_name: str) -> PktNet:
     if architecture == 'mnist_default':
         dims = [100, 50]
     elif architecture == 'fashion_mnist_default':
-        dims = [200, 100]
+        dims = [200, 100, 50]
     else:
         dims = eval(architecture)
 
