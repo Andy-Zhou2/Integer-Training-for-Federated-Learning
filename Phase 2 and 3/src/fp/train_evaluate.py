@@ -6,7 +6,7 @@ from torch.optim.lr_scheduler import StepLR
 import logging
 import os
 
-from ..dataset.fp_dataset import ClientDataset
+from ..dataset.fp_dataset import ClientDatasetFP
 
 def train_one_epoch(model, device, train_loader, optimizer, epoch, verbose):
     model.train()
@@ -61,7 +61,7 @@ def evaluate_model(model, device, test_loader, verbose=True):
     return test_loss, accuracy
 
 
-def train(model: torch.nn.Module, device: torch.device, data: ClientDataset, config: Dict[str, Any]) -> Dict[str, Any]:
+def train(model: torch.nn.Module, device: torch.device, data: ClientDatasetFP, config: Dict[str, Any]) -> Dict[str, Any]:
     result = {
         'train_total_loss': [],
         'test_avg_loss': [],

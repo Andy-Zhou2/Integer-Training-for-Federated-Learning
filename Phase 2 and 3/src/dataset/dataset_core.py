@@ -57,12 +57,13 @@ ClientDataset = Dict[str, Union[None, DataPartition]]
 
 
 def load_federated_dataset(dataset_name: str, dirichlet_alpha: Union[int, float], num_clients: int, train_ratio: float,
-                           shuffle: bool, post_process: str, batch_size: int = 0) \
+                           post_process: str, batch_size: int = 0, shuffle: bool = None) \
         -> Tuple[List[ClientDataset], DataPartition]:
     assert dataset_name in ['mnist', 'fashion_mnist']
     assert post_process in ['pktnn', 'fp']
     if post_process == 'pktnn':
         assert batch_size == 0, 'batch_size is not a valid argument for pktnn'
+        assert shuffle is None, 'shuffle is not a valid argument for pktnn'
 
     if dataset_name == 'mnist':
         each_client_data = 60_000 // num_clients
@@ -84,9 +85,9 @@ def load_federated_dataset(dataset_name: str, dirichlet_alpha: Union[int, float]
         if post_process == 'pktnn':
             partition = fds.load_partition(c).with_format('numpy')
             if not np.isclose(train_ratio, 1.0):  # split into train and test if train_ratio is not 1
+                # if seeded outside, the result will be deterministic
                 partition = partition.train_test_split(
-                    train_size=int(each_client_data * train_ratio))  # ratio 1 is not supported
-
+                    train_size=int(each_client_data * train_ratio))
                 train_image, train_label = partition['train']['image'], partition['train']['label']
                 train_image = train_image.reshape(-1, 28 * 28)
                 client_train_dataset = (train_image, train_label)
@@ -126,3 +127,14 @@ def load_federated_dataset(dataset_name: str, dirichlet_alpha: Union[int, float]
         test_dataset = DataLoader(test_partition, batch_size=batch_size, shuffle=False)
 
     return client_dataset, test_dataset
+
+
+if __name__ == '__main__':
+    np.random.seed(123)
+    import random
+    random.seed(123)
+    client_datasets, test_dataset = load_federated_dataset('mnist', 0.5, 10, 0.8, True, 'pktnn')
+    print(client_datasets[0]['train'][0].sum())
+    print(client_datasets[1]['train'][0].sum())
+    print(client_datasets[2]['train'][0].sum())
+    print(test_dataset)

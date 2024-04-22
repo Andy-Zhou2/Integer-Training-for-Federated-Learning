@@ -16,7 +16,7 @@ from flwr.common.logger import log
 from ..utils.utils_calc import truncate_divide
 
 
-def aggregate(results: List[Tuple[ClientProxy, FitRes]]) -> NDArrays:
+def aggregate_int(results: List[Tuple[ClientProxy, FitRes]]) -> NDArrays:
     # Sum total examples to use as a common multiplier to avoid floating-point division
     num_examples_total = sum(fit_res.num_examples for (_, fit_res) in results)
 
@@ -48,7 +48,7 @@ class FedAvgInt(fl.server.strategy.FedAvg):
             return None, {}
 
         assert not self.inplace, "Inplace aggregation is not supported for now."
-        parameters_aggregated = aggregate(results)
+        parameters_aggregated = aggregate_int(results)
 
         # Aggregate custom metrics if aggregation function was provided
         metrics_aggregated = {}

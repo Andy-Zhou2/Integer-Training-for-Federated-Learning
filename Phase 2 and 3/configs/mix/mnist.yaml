@@ -1,0 +1,24 @@
+num_clients: 100
+dataset_name: mnist
+num_rounds: 1000
+client_resources:
+  num_cpus: 1
+  num_gpus: 0.0
+lr: 0.1
+batch_size: 20
+epochs: 1
+test_every_epoch: false
+train_ratio: 1
+num_fit_clients: 100
+fraction_evaluate: 0
+global_seed: 123
+dataset_dirichlet_alpha: 1  # choose between {0.1, 1, 1000}
+model_name: mnist_default
+use_wandb: false
+train_verbose: false
+gamma: 0.5
+step_size: 10
+lr_inv: 1000
+shuffle_dataset_every_epoch: true
+label_target_value: 15
+fp_threshold_cid: 49

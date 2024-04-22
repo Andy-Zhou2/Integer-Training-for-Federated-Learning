@@ -5,7 +5,7 @@ import numbers
 
 import flwr as fl
 from ..fp.network import get_net
-from ..dataset.fp_dataset import load_federated_dataset_fp, ClientDataset
+from ..dataset.fp_dataset import load_federated_dataset_fp, ClientDatasetFP
 from torch.utils.data import DataLoader
 from flwr.common.typing import NDArrays
 from ..fp.train_evaluate import train, evaluate_model
@@ -29,7 +29,7 @@ def get_parameters(net: Module) -> List[np.ndarray]:
 
 
 class FlowerClient(fl.client.NumPyClient):
-    def __init__(self, net: Module, client_dataset: ClientDataset, cid: str, seed: int):
+    def __init__(self, net: Module, client_dataset: ClientDatasetFP, cid: str, seed: int):
         self.net = net
         self.client_dataset = client_dataset
         self.cid = cid
@@ -58,7 +58,7 @@ class FlowerClient(fl.client.NumPyClient):
         return loss, len_val_data, {"accuracy": accuracy, 'cid': self.cid}
 
 
-def client_fn(cid: str, model_name: str, client_datasets: List[ClientDataset], seed: int):
+def client_fn(cid: str, model_name: str, client_datasets: List[ClientDatasetFP], seed: int):
     set_seed(seed)
     net = get_net(model_name).to(device)
     cid_int = int(cid)

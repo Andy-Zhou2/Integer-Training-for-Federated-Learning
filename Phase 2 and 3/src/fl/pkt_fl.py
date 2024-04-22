@@ -1,5 +1,5 @@
 import numpy as np
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 import random
 from collections import defaultdict
 import numbers
@@ -7,15 +7,15 @@ import flwr as fl
 from flwr.common.typing import NDArrays
 import wandb
 
-from .strategy import FedAvgInt
+from .strategy_fedavg_int import FedAvgInt
 from ..pktnn.pkt_network import get_net, PktNet
-from ..dataset.pkt_dataset import DatasetTuple, load_federated_dataset_pkt, ClientDataset
+from ..dataset.pkt_dataset import DatasetTuple, load_federated_dataset_pkt, ClientDatasetPkt
 from ..pktnn.train_evaluate import pktnn_train, pktnn_evaluate
 from ..utils.utils_random import generate_rng, DeterministicClientManager, set_seed
 
 
 class FlowerClient(fl.client.NumPyClient):
-    def __init__(self, net: PktNet, client_dataset: ClientDataset, cid: str, seed: int):
+    def __init__(self, net: PktNet, client_dataset: ClientDatasetPkt, cid: str, seed: int):
         self.net = net
         self.client_dataset = client_dataset
         self.cid = cid
@@ -46,7 +46,7 @@ class FlowerClient(fl.client.NumPyClient):
         return float('NAN'), len_val_data, {"accuracy": accuracy, 'cid': self.cid}
 
 
-def client_fn(cid: str, model_name: str, client_datasets: List[ClientDataset], seed: int):
+def client_fn(cid: str, model_name: str, client_datasets: List[ClientDatasetPkt], seed: int):
     # Load model
     net = get_net(model_name)
     cid_int = int(cid)
@@ -94,7 +94,7 @@ def _on_evaluate_config_fn(server_round: int):
 
 def federated_evaluation_function(model_name: str, test_dataset: DatasetTuple,
                                   server_round: int, parameters: NDArrays, fed_eval_config: Dict[str, Any],
-                                  use_wandb: bool = False):
+                                  use_wandb: bool = False) -> Tuple[float, Dict[str, Any]]:
     """returns (loss, dict of results)"""
     net = get_net(model_name)
     net.set_parameters(parameters)
