@@ -32,11 +32,15 @@ class FedAvgMix(fl.server.strategy.Strategy):
             eval_fn: Callable[[NDArrays], Optional[Tuple[float, Dict[str, Scalar]]]],
             initial_parameters: Parameters,
             min_fit_clients: int = 2,
+            fp_weight_independence: bool = False,
+            pkt_weight_independence: bool = False,
     ) -> None:
         """
         Does not support client-side evaluation (fraction_evaluate=0).
 
-        @param fp_client_id_threshold: Client id that <= this value will be considered as FP clients.
+        @:param fp_client_id_threshold: Client id that <= this value will be considered as FP clients.
+        @:param fp_weight_independence: If True, the weights of FP clients will not be affected by PKT clients.
+        @:param pkt_weight_independence: If True, the weights of PKT clients will not be affected by FP clients.
         """
         super().__init__()
         self.min_fit_clients = min_fit_clients
@@ -45,6 +49,8 @@ class FedAvgMix(fl.server.strategy.Strategy):
         self.fp_config = fp_config
         self.pkt_config = pkt_config
         self.eval_fn = eval_fn
+        self.fp_weight_independence = fp_weight_independence
+        self.pkt_weight_independence = pkt_weight_independence
 
     def __repr__(self) -> str:
         return "FedAvgMix"
@@ -136,19 +142,24 @@ class FedAvgMix(fl.server.strategy.Strategy):
         # aggregate (take average) and then align back to pkt format
         mix_weight = aggregate_fp([(pkt_to_fp_weight, 1), (fp_avg_weight, 1)])
 
-        fp_to_pkt_weight = [
+        mix_to_pkt_weight = [
             (mix_weight[i] - fp_means[i]) / fp_stds[i] * pkt_stds[i] + pkt_means[i]
             for i in range(len(mix_weight))
         ]
-        for i in range(len(fp_to_pkt_weight)):
-            w = fp_to_pkt_weight[i]
+        for i in range(len(mix_to_pkt_weight)):
+            w = mix_to_pkt_weight[i]
             if i % 2 == 1:  # bias
-                fp_to_pkt_weight[i] = np.expand_dims(w, axis=0)
+                mix_to_pkt_weight[i] = np.expand_dims(w, axis=0)
             else:  # weight
-                fp_to_pkt_weight[i] = w.T
+                mix_to_pkt_weight[i] = w.T
 
-        fp_to_pkt_weight = [w.astype(np.int64) for w in fp_to_pkt_weight]
-        result_weight = mix_weight + fp_to_pkt_weight
+        mix_to_pkt_weight = [w.astype(np.int64) for w in mix_to_pkt_weight]
+
+        result_weight = []
+        result_weight.extend(fp_avg_weight if self.fp_weight_independence else mix_weight)
+        result_weight.extend(pkt_avg_weight if self.pkt_weight_independence else mix_to_pkt_weight)
+        # result_weight = mix_weight + mix_to_pkt_weight
+        # result_weight = fp_avg_weight + pkt_avg_weight
 
         return ndarrays_to_parameters(result_weight), {}
 

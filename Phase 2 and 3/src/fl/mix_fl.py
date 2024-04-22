@@ -116,7 +116,9 @@ def simulate(config):
         eval_fn=lambda parameters: federated_evaluation_function(model_name, test_dataset_fp, test_dataset_pkt, -1,
                                                                  parameters, {}, use_wandb),
         min_fit_clients=num_fit_clients,
-        initial_parameters=init_parameters
+        initial_parameters=init_parameters,
+        fp_weight_independence=True,
+        pkt_weight_independence=True
     )
 
     # Start simulation
