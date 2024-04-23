@@ -67,7 +67,7 @@ def simulate(config):
     client_resources = config.client_resources
     batch_size = config.batch_size
     fp_train_config = {
-        'epochs': config.epochs,
+        'epochs': config.fp_epochs,
         'lr': config.lr,
         'gamma': config.gamma,
         'step_size': config.step_size,
@@ -76,7 +76,7 @@ def simulate(config):
         'weight_folder': '',  # don't save weights
     }
     pkt_train_config = {
-        'epochs': config.epochs,
+        'epochs': config.pkt_epochs,
         'batch_size': config.batch_size,
         'initial_lr_inv': config.lr_inv,
         'weight_folder': '',  # empty string: don't save

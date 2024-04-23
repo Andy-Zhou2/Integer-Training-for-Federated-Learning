@@ -6,7 +6,8 @@ client_resources:
   num_gpus: 0.0
 lr: 0.1
 batch_size: 20
-epochs: 1
+pkt_epochs: 3
+fp_epochs: 1
 test_every_epoch: false
 train_ratio: 1
 num_fit_clients: 100
