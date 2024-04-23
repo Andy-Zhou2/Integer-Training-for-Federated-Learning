@@ -21,4 +21,8 @@ step_size: 10
 lr_inv: 1000
 shuffle_dataset_every_epoch: true
 label_target_value: 15
-fp_threshold_cid: 49
+fp_threshold_cid: 49  # cid 0 to 49 (50 clients) will be fp
+fp_weight_independence: false
+pkt_weight_independence: false
+fp_params_weight: 1
+pkt_params_weight: 1

@@ -2,9 +2,7 @@ from typing import Dict, List, Optional, Tuple
 from typing import Callable, Union
 import flwr as fl
 import numpy as np
-from collections import defaultdict
-import numbers
-import torch
+import logging
 from flwr.server.strategy.aggregate import aggregate as aggregate_fp
 from .strategy_fedavg_int import aggregate_int
 
@@ -34,6 +32,8 @@ class FedAvgMix(fl.server.strategy.Strategy):
             min_fit_clients: int = 2,
             fp_weight_independence: bool = False,
             pkt_weight_independence: bool = False,
+            fp_weight: int = 1,
+            pkt_weight: int = 1,
     ) -> None:
         """
         Does not support client-side evaluation (fraction_evaluate=0).
@@ -41,6 +41,10 @@ class FedAvgMix(fl.server.strategy.Strategy):
         @:param fp_client_id_threshold: Client id that <= this value will be considered as FP clients.
         @:param fp_weight_independence: If True, the weights of FP clients will not be affected by PKT clients.
         @:param pkt_weight_independence: If True, the weights of PKT clients will not be affected by FP clients.
+        @:param fp_weight: The weight of FP clients in the final aggregation.
+            This will be considered in conjunction with pkt_weight.
+        @:param pkt_weight: The weight of PKT clients in the final aggregation.
+            This will be considered in conjunction with fp_weight.
         """
         super().__init__()
         self.min_fit_clients = min_fit_clients
@@ -51,6 +55,8 @@ class FedAvgMix(fl.server.strategy.Strategy):
         self.eval_fn = eval_fn
         self.fp_weight_independence = fp_weight_independence
         self.pkt_weight_independence = pkt_weight_independence
+        self.fp_params_weight = fp_weight
+        self.pkt_params_weight = pkt_weight
 
     def __repr__(self) -> str:
         return "FedAvgMix"
@@ -113,10 +119,10 @@ class FedAvgMix(fl.server.strategy.Strategy):
         for i in range(len(pkt_weights_samples[0][0])):
             pkt_means.append(np.mean([w[i] for w, _ in pkt_weights_samples]))
             pkt_stds.append(np.std([w[i] for w, _ in pkt_weights_samples]))
-        print(f'fp means: {fp_means}')
-        print(f'fp stds: {fp_stds}')
-        print(f'pkt means: {pkt_means}')
-        print(f'pkt stds: {pkt_stds}')
+        logging.info(f'fp means: {fp_means}')
+        logging.info(f'fp stds: {fp_stds}')
+        logging.info(f'pkt means: {pkt_means}')
+        logging.info(f'pkt stds: {pkt_stds}')
 
         # calculate fp and pkt individually
         fp_avg_weight = aggregate_fp(fp_weights_samples)
@@ -140,7 +146,7 @@ class FedAvgMix(fl.server.strategy.Strategy):
                 pkt_to_fp_weight[i] = w.T
 
         # aggregate (take average) and then align back to pkt format
-        mix_weight = aggregate_fp([(pkt_to_fp_weight, 1), (fp_avg_weight, 1)])
+        mix_weight = aggregate_fp([(pkt_to_fp_weight, self.pkt_params_weight), (fp_avg_weight, self.fp_params_weight)])
 
         mix_to_pkt_weight = [
             (mix_weight[i] - fp_means[i]) / fp_stds[i] * pkt_stds[i] + pkt_means[i]
@@ -158,8 +164,6 @@ class FedAvgMix(fl.server.strategy.Strategy):
         result_weight = []
         result_weight.extend(fp_avg_weight if self.fp_weight_independence else mix_weight)
         result_weight.extend(pkt_avg_weight if self.pkt_weight_independence else mix_to_pkt_weight)
-        # result_weight = mix_weight + mix_to_pkt_weight
-        # result_weight = fp_avg_weight + pkt_avg_weight
 
         return ndarrays_to_parameters(result_weight), {}
 

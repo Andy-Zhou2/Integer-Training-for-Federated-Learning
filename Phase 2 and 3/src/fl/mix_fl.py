@@ -91,6 +91,10 @@ def simulate(config):
     use_wandb = config.use_wandb  # report each round accuracy to wandb if True
     num_fit_clients = config.num_fit_clients
     fp_threshold_cid = config.fp_threshold_cid
+    fp_weight_independence = config.fp_weight_independence
+    pkt_weight_independence = config.pkt_weight_independence
+    fp_params_weight = config.fp_params_weight
+    pkt_params_weight = config.pkt_params_weight
 
     _, client_cid_rng, _ = generate_rng(global_seed)
 
@@ -117,8 +121,10 @@ def simulate(config):
                                                                  parameters, {}, use_wandb),
         min_fit_clients=num_fit_clients,
         initial_parameters=init_parameters,
-        fp_weight_independence=False,
-        pkt_weight_independence=False
+        fp_weight_independence=fp_weight_independence,
+        pkt_weight_independence=pkt_weight_independence,
+        fp_weight=fp_params_weight,
+        pkt_weight=pkt_params_weight
     )
 
     # Start simulation
