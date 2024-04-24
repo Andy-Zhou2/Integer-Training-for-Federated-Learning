@@ -4,39 +4,52 @@ from .pkt_mat import PktMat, mat_elem_div_mat, mat_mul_const, mat_elem_mul_mat, 
 from .pkt_actv import activate
 import numpy as np
 import logging
+import torch
+import torch.nn.functional as F
+from typing import Union
 
 
-class PktFc(PktLayer):
-    def __init__(self, in_dim: int, out_dim: int, use_dfa: bool = True, activation: str = 'pocket_tanh',
-                 use_bn: bool = False, weight_max_absolute: int = 32767, name: str = "fc_noname",
-                 activation_k_bit: int = 8):
+def conv(A: np.ndarray, K: np.ndarray) -> np.ndarray:
+    """
+    Convolution operation by converting conv to matmul.
+    Suppose A is of shape (bs, N, N) and K is of shape (K, K).
+    The output should have shape (bs, T, T) where T = N - K + 1.
+    K is converted to matrix M of shape (T^2, N^2) and A is converted to matrix V of shape (N^2, bs).
+    """
+    ...
+
+
+class PktConv(PktLayer):
+    """This modules uses numpy array instead of PktMat. """
+
+    def __init__(self, in_channel: int, out_channel: int, kernel_size: int,
+                 use_dfa: bool = True, weight_max_absolute: int = 32767, name: str = "fc_noname",
+                 ):
         super().__init__()
         self.layer_type = PktLayer.LayerType.POCKET_FC
-        self.in_dim: int = in_dim
-        self.out_dim: int = out_dim
-        self.weight = PktMat(in_dim, out_dim)
-        self.bias = PktMat(1, out_dim)
+        self.in_channel = in_channel
+        self.out_channel = out_channel
+        self.kernel_size = kernel_size
+
+        self.weight = np.zeros((out_channel, in_channel, kernel_size, kernel_size))
+        self.bias = np.zeros(out_channel)
         self.name = name
         self.weight_max_absolute = weight_max_absolute
-        self.activation_k_bit = activation_k_bit
 
-        self.use_bn = use_bn
         self.use_dfa = use_dfa
-        self.dfa_weight = PktMat()
+        self.dfa_weight = None
 
-        self.actv_grad_inv = PktMat()
-        self.output = PktMat()
-        self.input = PktMat()
-        self.activation = activation
+        self.input: Union[None, PktMat] = None
+        self.input_4d_shape: Union[None, np.ndarray] = None
+        self.output: Union[None, PktMat] = None
+        self.output_4d_shape: Union[None, np.ndarray] = None
 
 
     def __repr__(self):
-        return f"FC Layer: {self.in_dim} -> {self.out_dim} with clip {self.weight_max_absolute}"
+        return (f"Conv Layer: {self.out_channel, self.in_channel, self.kernel_size} "
+                f"with clip {self.weight_max_absolute}")
 
-    def batch_normalization(self):
-        raise NotImplementedError
-
-    def set_next_layer(self, layer):
+    def set_next_layer(self, layer: PktLayer):
         self.next_layer = layer
         layer.prev_layer = self
         return self
@@ -44,13 +57,24 @@ class PktFc(PktLayer):
     def get_output_for_fc(self):
         return self.output
 
-    def forward(self, x):
+    def forward(self, x: PktMat):
         """Note that input, output and actv_grad_inv are set and used in the backwards process"""
         self.input = x
 
-        inter = mat_mul_mat(x, self.weight)
-        inter.self_add_mat(self.bias)
-        self.output, self.actv_grad_inv = activate(inter, self.activation, self.activation_k_bit, self.in_dim)
+        x = x.mat  # (bs, in_channel * n * n)
+        image_side_length = int(x.shape[1] ** 0.5)
+        assert image_side_length ** 2 == x.shape[1]
+        x = x.reshape(x.shape[0], self.in_channel, image_side_length, image_side_length)
+        self.input_4d_shape = x
+
+        output = F.conv2d(torch.from_numpy(x), torch.from_numpy(self.weight), bias=torch.from_numpy(self.bias))
+        # output of shape (bs, out_channel, t, t) where t = n - kernel_size + 1
+        assert output.dtype == torch.int64
+        output = output.numpy()
+        self.output_4d_shape = output
+        output = output.reshape(output.shape[0], -1)  # (bs, out_channel * t * t)
+        self.output = PktMat(output.shape[0], output.shape[1], output)
+
 
         if self.next_layer is not None:
             self.next_layer.forward(self.output)
@@ -64,21 +88,19 @@ class PktFc(PktLayer):
         self.dfa_weight.set_random(False, -weight_range, weight_range)
 
     def compute_deltas(self, final_layer_delta_mat):
-        # Handling WITHOUT batch normalization
         if self.next_layer is None:
-            deltas = mat_elem_div_mat(final_layer_delta_mat, self.actv_grad_inv)
-        else:
-            assert self.use_dfa
-            if not ((self.dfa_weight.row == final_layer_delta_mat.col) and
-                    (self.dfa_weight.col == self.weight.col)):  # if uninitialized, set random
-                self.set_random_dfa_weight(final_layer_delta_mat.col, self.weight.col)
-            deltas = mat_mul_mat(final_layer_delta_mat, self.dfa_weight)
-            deltas.self_elem_div_mat(self.actv_grad_inv)
+            raise NotImplementedError("Unexpected circumstance: Conv layer should not be the last layer.")
+
+        assert self.use_dfa
+        if self.dfa_weight is None:  # if uninitialized, set random
+            self.set_random_dfa_weight(final_layer_delta_mat.col, self.output.shape[1])
+        deltas = mat_mul_mat(final_layer_delta_mat, self.dfa_weight)
 
         return deltas
 
     def backward(self, final_layer_delta_mat, lr_inv):
         deltas = self.compute_deltas(final_layer_delta_mat)
+        deltas = deltas.mat.reshape(self.output_4d_shape.shape)
 
         batch_size = deltas.row
 
