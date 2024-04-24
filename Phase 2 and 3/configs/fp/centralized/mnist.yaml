@@ -1,6 +1,6 @@
 dataset: mnist
 batch_size: 20
-epochs: 100
+epochs: 1000
 lr: 0.1
 gamma: 0.5  # Learning rate decay
 step_size: 10  # Learning rate decay step
