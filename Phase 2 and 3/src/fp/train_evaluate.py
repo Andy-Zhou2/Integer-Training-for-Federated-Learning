@@ -8,6 +8,7 @@ import os
 
 from ..dataset.fp_dataset import ClientDatasetFP
 
+
 def train_one_epoch(model, device, train_loader, optimizer, epoch, verbose):
     model.train()
 
@@ -28,10 +29,6 @@ def train_one_epoch(model, device, train_loader, optimizer, epoch, verbose):
         total_loss += loss.item()
         loss.backward()
         optimizer.step()
-
-        if verbose and batch_idx % 10 == 0:
-            logging.info(
-                f'Train Epoch: {epoch} [{batch_idx * len(data)}/{len(train_loader.dataset)} ({100. * batch_idx / len(train_loader):.0f}%)]\tLoss: {loss.item():.6f}')
     if verbose:
         logging.info(
             f'Train Epoch: {epoch} Accuracy: {correct_count}/{total_count} ({100. * correct_count / total_count:.2f}%) Loss: {total_loss:.6f}')
@@ -61,7 +58,8 @@ def evaluate_model(model, device, test_loader, verbose=True):
     return test_loss, accuracy
 
 
-def train(model: torch.nn.Module, device: torch.device, data: ClientDatasetFP, config: Dict[str, Any]) -> Dict[str, Any]:
+def train(model: torch.nn.Module, device: torch.device, data: ClientDatasetFP, config: Dict[str, Any]) -> Dict[
+    str, Any]:
     result = {
         'train_total_loss': [],
         'test_avg_loss': [],
