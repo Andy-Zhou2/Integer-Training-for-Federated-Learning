@@ -51,7 +51,6 @@ class PktFc(PktLayer):
         inter = mat_mul_mat(x, self.weight)
         inter.self_add_mat(self.bias)
         self.output, self.actv_grad_inv = activate(inter, self.activation, self.activation_k_bit, self.in_dim)
-        print(f'layer {self.in_dim} -> {self.out_dim} output: {np.abs(self.output.mat).max()}')
 
         if self.next_layer is not None:
             self.next_layer.forward(self.output)
@@ -99,10 +98,6 @@ class PktFc(PktLayer):
         bias_update = mat_mul_mat(all_one_mat, deltas)
         bias_update.self_div_const(-lr_inv)
         self.bias.self_add_mat(bias_update)
-
-        print(f'layer {self.in_dim} -> {self.out_dim} weight_update: {np.abs(weight_update.mat).max()} bias_update: {np.abs(bias_update.mat).max()}')
-        print(
-            f'layer {self.in_dim} -> {self.out_dim} weight: {np.abs(self.weight.mat).max()} bias: {np.abs(self.bias.mat).max()}')
 
         self.weight.clamp_mat(-self.weight_max_absolute, self.weight_max_absolute)
         self.bias.clamp_mat(-self.weight_max_absolute, self.weight_max_absolute)
