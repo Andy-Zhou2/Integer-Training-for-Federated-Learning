@@ -3,6 +3,7 @@ import numpy as np
 import re
 
 from .pkt_fc import PktFc
+from .pkt_conv import PktConv
 from .pkt_mat import PktMat
 from .pkt_state import save_state, load_state
 from typing import List, Union
@@ -93,12 +94,51 @@ class LinearNet(PktNet):
         return f'LinearNet({self.fc_list})'
 
 
+class ConvNet(PktNet):
+    def __init__(self, activation: str,
+                 weight_clip_each_layer: Union[None, List[int]] = None):
+        self.fc_list = []
+
+        conv1 = PktConv(1, 1, 3, use_dfa=True, weight_max_absolute=32767)
+        # conv2 = PktConv(3, 6, 3, use_dfa=True, weight_max_absolute=32767)
+        fc1 = PktFc(1 * 26 * 26, 100, use_dfa=True, activation=activation, weight_max_absolute=32767)
+        fc2 = PktFc(100, 50, use_dfa=True, activation=activation, weight_max_absolute=32767)
+        fc3 = PktFc(50, 10, use_dfa=True, activation=activation, weight_max_absolute=32767)
+        self.fc_list = [conv1, fc1, fc2, fc3]
+
+        for i in range(len(self.fc_list) - 1):
+            self.fc_list[i].set_next_layer(self.fc_list[i + 1])
+
+    def forward(self, x: PktMat) -> PktMat:
+        self.fc_list[0].forward(x)
+        return self.fc_list[-1].output
+
+    def backward(self, loss_delta_mat: PktMat, lr_inv: np.int_):
+        self.fc_list[-1].backward(loss_delta_mat, lr_inv)
+
+    def save(self, filename: str):
+        raise NotImplementedError("Still need to figure out conv weight type")
+        # save_state(self.fc_list, filename)
+
+    def load(self, filename: str):
+        raise NotImplementedError("Still need to figure out conv weight type")
+        # load_state(self.fc_list, filename)
+
+    def get_fc_list(self) -> List[PktFc]:
+        return self.fc_list
+
+    def __repr__(self):
+        return f'ConvNet({self.fc_list})'
+
+
 def get_net(model_name: str) -> PktNet:
     """
     Model name consists of two parts, specifying the model and the clip ranges respectively.
     Model name could be mnist_default, fashion_mnist_default, or [200,100] with no space.
     Clip ranges are optional, and consists of a list of integers with no space.
     """
+    if model_name == 'conv_net':
+        return ConvNet(activation='pocket_tanh')
     pattern = r'^(\[[0-9,]*\]|mnist_default|fashion_mnist_default)( \[[0-9,]*\])?$'
     match = re.match(pattern, model_name)
     if not match:

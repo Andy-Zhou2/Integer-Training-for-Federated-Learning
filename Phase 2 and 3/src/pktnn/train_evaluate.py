@@ -73,10 +73,16 @@ def pktnn_train(net: PktNet, data: Dict[str, Tuple[np.ndarray, np.ndarray]], con
             mini_batch_images[0:BATCH_SIZE] = mnist_train_images[indices[idx_start:idx_end]]
             mini_batch_train_targets[0:BATCH_SIZE] = train_target_mat[indices[idx_start:idx_end]]
 
+            if i == 40:
+                print('DEBUG')
+
             output = net.forward(mini_batch_images)
 
-            sum_loss += sum(np.square(mini_batch_train_targets.mat - output.mat).flatten() // 2)
+            loss = sum(np.square(mini_batch_train_targets.mat - output.mat).flatten() // 2)
+            sum_loss += loss
             loss_delta_mat = batch_l2_loss_delta(mini_batch_train_targets, output)
+            print('square loss:', loss)
+            output.print()
 
             for r in range(BATCH_SIZE):
                 if mini_batch_train_targets.get_max_index_in_row(r) == output.get_max_index_in_row(r):

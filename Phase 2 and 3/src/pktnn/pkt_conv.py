@@ -7,6 +7,7 @@ import logging
 import torch
 import torch.nn.functional as F
 from typing import Union
+from ..utils.utils_calc import truncate_divide
 
 
 def conv(A: np.ndarray, K: np.ndarray) -> np.ndarray:
@@ -31,19 +32,18 @@ class PktConv(PktLayer):
         self.out_channel = out_channel
         self.kernel_size = kernel_size
 
-        self.weight = np.zeros((out_channel, in_channel, kernel_size, kernel_size))
-        self.bias = np.zeros(out_channel)
+        self.weight = np.zeros((out_channel, in_channel, kernel_size, kernel_size), dtype=np.int64)
+        self.bias = np.zeros(out_channel, dtype=np.int64)
         self.name = name
         self.weight_max_absolute = weight_max_absolute
 
         self.use_dfa = use_dfa
-        self.dfa_weight = None
+        self.dfa_weight = PktMat()
 
         self.input: Union[None, PktMat] = None
         self.input_4d_shape: Union[None, np.ndarray] = None
         self.output: Union[None, PktMat] = None
         self.output_4d_shape: Union[None, np.ndarray] = None
-
 
     def __repr__(self):
         return (f"Conv Layer: {self.out_channel, self.in_channel, self.kernel_size} "
@@ -62,9 +62,10 @@ class PktConv(PktLayer):
         self.input = x
 
         x = x.mat  # (bs, in_channel * n * n)
-        image_side_length = int(x.shape[1] ** 0.5)
-        assert image_side_length ** 2 == x.shape[1]
-        x = x.reshape(x.shape[0], self.in_channel, image_side_length, image_side_length)
+        x = x.reshape(x.shape[0], self.in_channel, -1)  # (bs, in_channel, n * n)
+        image_side_length = int(x.shape[2] ** 0.5)
+        assert image_side_length ** 2 == x.shape[2]
+        x = x.reshape(x.shape[0], self.in_channel, image_side_length, image_side_length).astype(np.int64)
         self.input_4d_shape = x
 
         output = F.conv2d(torch.from_numpy(x), torch.from_numpy(self.weight), bias=torch.from_numpy(self.bias))
@@ -75,13 +76,12 @@ class PktConv(PktLayer):
         output = output.reshape(output.shape[0], -1)  # (bs, out_channel * t * t)
         self.output = PktMat(output.shape[0], output.shape[1], output)
 
-
         if self.next_layer is not None:
             self.next_layer.forward(self.output)
 
     def set_random_dfa_weight(self, r, c):
         self.dfa_weight.init_zeros(r, c)
-        weight_range = np.int_(np.floor(np.sqrt((12 * self.weight_max_absolute) / (self.in_dim + self.out_dim))))
+        weight_range = np.int_(100) #TODO: check np.floor(np.sqrt((12 * self.weight_max_absolute) / (self.in_dim + self.out_dim))))
         if weight_range == 0:
             weight_range = 1
             logging.warning(f"Weight range is 0 for layer {self.name}. Setting to 1.")
@@ -92,7 +92,7 @@ class PktConv(PktLayer):
             raise NotImplementedError("Unexpected circumstance: Conv layer should not be the last layer.")
 
         assert self.use_dfa
-        if self.dfa_weight is None:  # if uninitialized, set random
+        if self.dfa_weight.row == 0 and self.dfa_weight.col == 0:  # if uninitialized, set random
             self.set_random_dfa_weight(final_layer_delta_mat.col, self.output.shape[1])
         deltas = mat_mul_mat(final_layer_delta_mat, self.dfa_weight)
 
@@ -100,29 +100,32 @@ class PktConv(PktLayer):
 
     def backward(self, final_layer_delta_mat, lr_inv):
         deltas = self.compute_deltas(final_layer_delta_mat)
-        deltas = deltas.mat.reshape(self.output_4d_shape.shape)
+        deltas = deltas.mat.reshape(self.output_4d_shape.shape)  # (bs, out_channel, t, t)
 
-        batch_size = deltas.row
+        batch_size = deltas.shape[0]
 
-        if self.prev_layer is None:
-            prev_output_transpose = transpose_of(self.input)
-        else:
-            prev_output_transpose = transpose_of(self.prev_layer.get_output_for_fc())
+        for o in range(self.out_channel):
+            for i in range(self.in_channel):
+                total_update = np.zeros((self.kernel_size, self.kernel_size), dtype=np.int64)
+                for batch in range(batch_size):
+                    input_mat = self.input_4d_shape[batch, i]
+                    kernel_mat = deltas[batch, o]
 
-        # Update weights
-        weight_update = mat_mul_mat(prev_output_transpose, deltas)
-        weight_update.self_div_const(-lr_inv)
-        self.weight.self_add_mat(weight_update)
+                    input_mat = torch.from_numpy(input_mat).unsqueeze(0).unsqueeze(0)  # (bs=1, channel=1, n, n)
+                    kernel_mat = torch.from_numpy(kernel_mat).unsqueeze(0).unsqueeze(0)  # (out=1, in=1, k, k)
+                    update = F.conv2d(input_mat, kernel_mat)[0][0]  # (t, t)
+                    total_update += update.numpy()
+                # truncate_divide(total_update, -lr_inv)
+                self.weight[o, i] += truncate_divide(total_update, -lr_inv)
+                self.weight[o, i] = np.clip(self.weight[o, i], -self.weight_max_absolute, self.weight_max_absolute)
 
-        # Update bias
-        assert not self.use_bn
-        all_one_mat = PktMat.fill(row=1, col=batch_size, value=1)
-        bias_update = mat_mul_mat(all_one_mat, deltas)
-        bias_update.self_div_const(-lr_inv)
-        self.bias.self_add_mat(bias_update)
-
-        self.weight.clamp_mat(-self.weight_max_absolute, self.weight_max_absolute)
-        self.bias.clamp_mat(-self.weight_max_absolute, self.weight_max_absolute)
+        for c in range(self.out_channel):
+            total_update = 0
+            for batch in range(batch_size):
+                total_update += np.sum(deltas[batch, c])
+            truncate_divide(total_update, -lr_inv)
+            self.bias[c] += total_update
+            self.bias[c] = np.clip(self.bias[c], -self.weight_max_absolute, self.weight_max_absolute)
 
         if self.prev_layer is not None:
             self.prev_layer.backward(final_layer_delta_mat, lr_inv)

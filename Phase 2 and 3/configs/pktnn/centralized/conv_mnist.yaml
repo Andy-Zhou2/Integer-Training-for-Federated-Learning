@@ -1,0 +1,12 @@
+dataset: mnist  # choose between {mnist, fashion_mnist}
+epochs: 1000
+batch_size: 10
+initial_lr_inv: 4000
+weight_folder: ""
+test_every_epoch: true
+print_hash_every_epoch: false
+shuffle_dataset_every_epoch: true
+verbose: true
+seed: 123
+label_target_value: 15
+model_name: conv_net
