@@ -185,7 +185,7 @@ if __name__ == '__main__':
     min_max_config = get_statistics(channel1=channel1, channel2=channel2)
     print('min_max_config', min_max_config)
 
-    for bw in [4, 5, 6, 7]:
+    for bw in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 16, 20, 24, 28, 32]:
         for key in bit_width_config:
             if 'bias' not in key:
                 bit_width_config[key] = bw
@@ -229,3 +229,9 @@ if __name__ == '__main__':
                 print(
                     f'Correct Top-1: {correct_test_top1}, Top-2: {correct_test_top2}, Top-3: {correct_test_top3}, '
                     f'Total: {total_test}')
+        accuracy_top1 = correct_test_top1 / total_test * 100
+        accuracy_top2 = correct_test_top2 / total_test * 100
+        accuracy_top3 = correct_test_top3 / total_test * 100
+
+        with open('mnist_accuracy.txt', 'a') as f:
+            f.write(f'{bw},{accuracy_top1},{accuracy_top2},{accuracy_top3}\n')
