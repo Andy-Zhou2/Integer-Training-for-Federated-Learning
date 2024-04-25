@@ -116,15 +116,14 @@ class PktConv(PktLayer):
                     update = F.conv2d(input_mat, kernel_mat)[0][0]  # (t, t)
                     total_update += update.numpy()
                 # truncate_divide(total_update, -lr_inv)
-                self.weight[o, i] += truncate_divide(total_update, -lr_inv)
+                self.weight[o, i] += truncate_divide(total_update, -lr_inv * 10)
                 self.weight[o, i] = np.clip(self.weight[o, i], -self.weight_max_absolute, self.weight_max_absolute)
 
         for c in range(self.out_channel):
             total_update = 0
             for batch in range(batch_size):
                 total_update += np.sum(deltas[batch, c])
-            truncate_divide(total_update, -lr_inv)
-            self.bias[c] += total_update
+            self.bias[c] += truncate_divide(total_update, -lr_inv * 10)
             self.bias[c] = np.clip(self.bias[c], -self.weight_max_absolute, self.weight_max_absolute)
 
         if self.prev_layer is not None:
