@@ -1,23 +1,22 @@
 import numpy as np
 from typing import List, Dict, Any, Tuple
-from collections import OrderedDict, defaultdict
-import numbers
-
+import wandb
+import torch
+from torch.utils.data import DataLoader
 import flwr as fl
+from flwr.common.typing import NDArrays
+from flwr.common import ndarrays_to_parameters
+
 from ..fp.network import get_net as fp_get_net
 from ..pktnn.pkt_network import get_net as pkt_get_net
 from ..dataset.dataset_core import DatasetTuple
 from ..dataset.fp_dataset import load_federated_dataset_fp, ClientDatasetFP
 from ..dataset.pkt_dataset import load_federated_dataset_pkt, ClientDatasetPkt
-from torch.utils.data import DataLoader
-from flwr.common.typing import NDArrays
 from ..utils.utils_random import generate_rng, DeterministicClientManager, set_seed
-import torch
 from .fp_fl import FlowerClient as FPFlowerClient, federated_evaluation_function as fp_federated_evaluation_function, \
     get_parameters as fp_get_parameters
 from .pkt_fl import FlowerClient as PKTFlowerClient, federated_evaluation_function as pkt_federated_evaluation_function
 from .strategy_fedavg_mix import FedAvgMix
-from flwr.common import ndarrays_to_parameters
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -42,15 +41,16 @@ def federated_evaluation_function(model_name: str, fp_test_dataset: DataLoader, 
                                   use_wandb: bool = False) -> Tuple[float, Dict[str, Any]]:
     fp_parameters = parameters[:len(parameters) // 2]  # the first half of the parameters are FP weights
     fp_loss, fp_acc = fp_federated_evaluation_function(model_name, fp_test_dataset, server_round, fp_parameters,
-                                                       fed_eval_config,
-                                                       use_wandb)
+                                                       fed_eval_config, use_wandb=False)
     fp_acc = fp_acc['accuracy']
 
     pkt_parameters = parameters[len(parameters) // 2:]  # the second half of the parameters are PKT weights
     pkt_loss, pkt_acc = pkt_federated_evaluation_function(model_name, pkt_test_dataset, server_round, pkt_parameters,
-                                                          fed_eval_config,
-                                                          use_wandb)
+                                                          fed_eval_config, use_wandb=False)
     pkt_acc = pkt_acc['accuracy']
+
+    if use_wandb:
+        wandb.log({'fp_accuracy': fp_acc, 'pkt_accuracy': pkt_acc})
 
     return (fp_loss + pkt_loss) / 2, {'fp_accuracy': fp_acc, 'pkt_accuracy': pkt_acc}  # pkt_loss is NAN
 
