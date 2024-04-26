@@ -3,6 +3,7 @@ import torch
 from torchvision import datasets, transforms
 from quantize.quantized_number import QuantizedArray, compute_M0repr_and_n
 from collect_statistics import get_statistics
+import copy
 
 channel1 = 2
 channel2 = 4
@@ -167,7 +168,7 @@ def infer(data, bit_width_config, min_max_config):
 
 
 if __name__ == '__main__':
-    bit_width_config = {
+    bit_width_config_copy = {
         'input': 8,
         'conv1_weight': 8,
         'conv1_bias': 32,
@@ -185,53 +186,59 @@ if __name__ == '__main__':
     min_max_config = get_statistics(channel1=channel1, channel2=channel2)
     print('min_max_config', min_max_config)
 
-    for bw in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 16, 20, 24, 28, 32]:
-        for key in bit_width_config:
-            if 'bias' not in key:
-                bit_width_config[key] = bw
-        print('bit_width_config', bit_width_config)
+    # for bw in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 16, 20, 24, 28, 32]:
+    #     for key in bit_width_config:
+    #         if 'bias' not in key:
+    #             bit_width_config[key] = bw
 
-        correct_test_top1 = 0
-        correct_test_top2 = 0
-        correct_test_top3 = 0
-        total_test = 0
+    for layer in ['conv1_weight', 'conv2_weight', 'fc1_weight', 'fc2_weight']:
+        for bw in [4, 2, 1]:
+            bit_width_config = copy.deepcopy(bit_width_config_copy)
+            bit_width_config[layer] = bw
 
-        for i, (data, answer) in enumerate(dataset_test):
-            output = infer(data, bit_width_config, min_max_config).array
-            sorted_indices = np.argsort(output)[::-1]  # Sort indices of output in descending order of confidence
+            print('bit_width_config', bit_width_config)
 
-            # Get top-1, top-2, and top-3 predictions
-            top1_prediction = sorted_indices[0]
-            top2_predictions = sorted_indices[:2]
-            top3_predictions = sorted_indices[:3]
+            correct_test_top1 = 0
+            correct_test_top2 = 0
+            correct_test_top3 = 0
+            total_test = 0
 
-            # Increment correct counters as appropriate
-            if top1_prediction == answer:
-                correct_test_top1 += 1
-            if answer in top2_predictions:
-                correct_test_top2 += 1
-            if answer in top3_predictions:
-                correct_test_top3 += 1
+            for i, (data, answer) in enumerate(dataset_test):
+                output = infer(data, bit_width_config, min_max_config).array
+                sorted_indices = np.argsort(output)[::-1]  # Sort indices of output in descending order of confidence
 
-            # Optional: Print predictions for the first 10 instances or if the model is incorrect
-            if top1_prediction != answer or i < 10:
-                print(f'Prediction at index {i}, answer: {answer}, prediction: {top1_prediction}, output: {output}')
+                # Get top-1, top-2, and top-3 predictions
+                top1_prediction = sorted_indices[0]
+                top2_predictions = sorted_indices[:2]
+                top3_predictions = sorted_indices[:3]
 
-            total_test += 1
+                # Increment correct counters as appropriate
+                if top1_prediction == answer:
+                    correct_test_top1 += 1
+                if answer in top2_predictions:
+                    correct_test_top2 += 1
+                if answer in top3_predictions:
+                    correct_test_top3 += 1
 
-            # Print accuracies every 100 samples
-            if total_test % 100 == 0:
-                accuracy_top1 = correct_test_top1 / total_test * 100
-                accuracy_top2 = correct_test_top2 / total_test * 100
-                accuracy_top3 = correct_test_top3 / total_test * 100
-                print(
-                    f'Accuracy Top-1: {accuracy_top1:.2f}%, Top-2: {accuracy_top2:.2f}%, Top-3: {accuracy_top3:.2f}%')
-                print(
-                    f'Correct Top-1: {correct_test_top1}, Top-2: {correct_test_top2}, Top-3: {correct_test_top3}, '
-                    f'Total: {total_test}')
-        accuracy_top1 = correct_test_top1 / total_test * 100
-        accuracy_top2 = correct_test_top2 / total_test * 100
-        accuracy_top3 = correct_test_top3 / total_test * 100
+                # Optional: Print predictions for the first 10 instances or if the model is incorrect
+                if top1_prediction != answer or i < 10:
+                    print(f'Prediction at index {i}, answer: {answer}, prediction: {top1_prediction}, output: {output}')
 
-        with open('mnist_accuracy.txt', 'a') as f:
-            f.write(f'{bw},{accuracy_top1},{accuracy_top2},{accuracy_top3}\n')
+                total_test += 1
+
+                # Print accuracies every 100 samples
+                if total_test % 100 == 0:
+                    accuracy_top1 = correct_test_top1 / total_test * 100
+                    accuracy_top2 = correct_test_top2 / total_test * 100
+                    accuracy_top3 = correct_test_top3 / total_test * 100
+                    print(
+                        f'Accuracy Top-1: {accuracy_top1:.2f}%, Top-2: {accuracy_top2:.2f}%, Top-3: {accuracy_top3:.2f}%')
+                    print(
+                        f'Correct Top-1: {correct_test_top1}, Top-2: {correct_test_top2}, Top-3: {correct_test_top3}, '
+                        f'Total: {total_test}')
+            accuracy_top1 = correct_test_top1 / total_test * 100
+            accuracy_top2 = correct_test_top2 / total_test * 100
+            accuracy_top3 = correct_test_top3 / total_test * 100
+
+            with open('mnist_accuracy.txt', 'a') as f:
+                f.write(f'{layer} {bw}\t{accuracy_top1}\t{accuracy_top2}\t{accuracy_top3}\n')
