@@ -73,6 +73,9 @@ def train(model: torch.nn.Module, device: torch.device, data: ClientDatasetFP, c
     train_loader = data['train']
     test_loader = data['test']
 
+    logging.info('initial eval')
+    test_loss, test_acc = evaluate_model(model, device, test_loader, True)
+
     # Training loop
     for epoch in range(1, config['epochs'] + 1):
         train_loss, train_acc = train_one_epoch(model, device, train_loader, optimizer, epoch, config['verbose'])
