@@ -1,6 +1,6 @@
 import os
 from src.pktnn.pkt_network import get_net
-from src.pktnn.train_evaluate import pktnn_train
+from src.pktnn.train_evaluate import pktnn_train, pktnn_evaluate
 from src.dataset.pkt_dataset import get_centralized_dataloader_pkt
 import hydra
 from omegaconf import DictConfig, OmegaConf
@@ -30,11 +30,11 @@ def main(config: DictConfig):
     net = get_net(config.model_name)
 
     # initial testing
-    # logging.info('Initial testing')
-    # acc = pktnn_evaluate(net, train_data)
-    # logging.info(f'Initial training accuracy: {acc * 100}%')
-    # acc = pktnn_evaluate(net, test_data)
-    # logging.info(f'Initial testing accuracy: {acc * 100}%')
+    logging.info('Initial testing')
+    acc = pktnn_evaluate(net, train_data)
+    logging.info(f'Initial training accuracy: {acc * 100}%')
+    acc = pktnn_evaluate(net, test_data)
+    logging.info(f'Initial testing accuracy: {acc * 100}%')
 
     seed = config.seed
     set_seed(seed)
