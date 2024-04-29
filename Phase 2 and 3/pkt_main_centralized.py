@@ -30,11 +30,12 @@ def main(config: DictConfig):
     net = get_net(config.model_name)
 
     # initial testing
-    logging.info('Initial testing')
-    acc = pktnn_evaluate(net, train_data)
-    logging.info(f'Initial training accuracy: {acc * 100}%')
-    acc = pktnn_evaluate(net, test_data)
-    logging.info(f'Initial testing accuracy: {acc * 100}%')
+    if config.initial_test:
+        logging.info('Initial testing')
+        acc = pktnn_evaluate(net, train_data)
+        logging.info(f'Initial training accuracy: {acc * 100}%')
+        acc = pktnn_evaluate(net, test_data)
+        logging.info(f'Initial testing accuracy: {acc * 100}%')
 
     seed = config.seed
     set_seed(seed)
