@@ -23,16 +23,19 @@ for bw in range(2, 64):
     print(f'Working on {bw}')
 
     # os.mkdir('./activations')
-    print('Creating model')
+    # print('Creating model')
     net = get_net(dataset_name + '_default')
     net.load(os.path.join(weight_folder, 'epoch_40.npz'))
 
     net_dict = np.load(os.path.join(weight_folder, 'epoch_40.npz'), allow_pickle=True)
     for key in net_dict:
-        print(f'{key}: {np.percentile(net_dict[key], np.arange(0, 101, 50))}')
+        weight = net_dict[key]
+        print(f'{max(abs(weight.max()), abs(weight.min()))}', end='\t')
+        # print(f'{key}: {np.percentile(net_dict[key], np.arange(0, 101, 50))}')
+    print()
 
     # initial testing
-    print('Doing Inference...')
+    # print('Doing Inference...')
     # acc = pktnn_evaluate(net, train_data)
     # print(f'Initial training accuracy: {acc * 100}%')
     acc = pktnn_evaluate(net, test_data)

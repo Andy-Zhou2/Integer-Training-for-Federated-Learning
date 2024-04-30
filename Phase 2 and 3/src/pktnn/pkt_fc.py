@@ -56,13 +56,14 @@ class PktFc(PktLayer):
             # np.save(f'./activations/layer_{layer_count}_{name}.npy', mat.mat)
 
         inter = mat_mul_mat(x, self.weight)
-        print(f'inter: {np.percentile(inter.mat, np.arange(0, 101, 50))}')
+        # print(f'inter: {np.percentile(inter.mat, np.arange(0, 101, 50))}')
         save_mat(inter, 'inter')
         inter.self_add_mat(self.bias)
-        print(f'inter2: {np.percentile(inter.mat, np.arange(0, 101, 50))}')
+        # print(f'inter2: {np.percentile(inter.mat, np.arange(0, 101, 50))}')
+        print(f'inter2: {max(abs(inter.mat.max()), abs(inter.mat.min()))}')
         save_mat(inter, 'inter2')
         self.output, self.actv_grad_inv = activate(inter, self.activation, self.activation_k_bit, self.in_dim)
-        print(f'self.output: {np.percentile(self.output.mat, np.arange(0, 101, 50))}')
+        # print(f'self.output: {np.percentile(self.output.mat, np.arange(0, 101, 50))}')
         save_mat(inter, 'output')
 
         if self.next_layer is not None:
