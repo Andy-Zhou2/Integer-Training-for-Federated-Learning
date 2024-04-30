@@ -57,7 +57,7 @@ class PktFc(PktLayer):
 
     def set_random_dfa_weight(self, r, c):
         self.dfa_weight.init_zeros(r, c)
-        weight_range = np.int_(np.floor(np.sqrt((12 * self.weight_max_absolute) / (self.in_dim + self.out_dim))))
+        weight_range = np.int64(np.floor(np.sqrt((12 * self.weight_max_absolute) / (self.in_dim + self.out_dim))))
         if weight_range == 0:
             weight_range = 1
             logging.warning(f"Weight range is 0 for layer {self.name}. Setting to 1.")
