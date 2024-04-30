@@ -48,9 +48,22 @@ class PktFc(PktLayer):
         """Note that input, output and actv_grad_inv are set and used in the backwards process"""
         self.input = x
 
+        def save_mat(mat, name):
+            import os
+            # layer_count = 1
+            # while os.path.exists(f'./activations/layer_{layer_count}_{name}.npy'):
+            #     layer_count += 1
+            # np.save(f'./activations/layer_{layer_count}_{name}.npy', mat.mat)
+
         inter = mat_mul_mat(x, self.weight)
+        print(f'inter: {np.percentile(inter.mat, np.arange(0, 101, 50))}')
+        save_mat(inter, 'inter')
         inter.self_add_mat(self.bias)
+        print(f'inter2: {np.percentile(inter.mat, np.arange(0, 101, 50))}')
+        save_mat(inter, 'inter2')
         self.output, self.actv_grad_inv = activate(inter, self.activation, self.activation_k_bit, self.in_dim)
+        print(f'self.output: {np.percentile(self.output.mat, np.arange(0, 101, 50))}')
+        save_mat(inter, 'output')
 
         if self.next_layer is not None:
             self.next_layer.forward(self.output)
