@@ -21,7 +21,7 @@ def compute_M0repr_and_n(input_scale, weights_scale, output_scale):
     :return: M0_repr, n
     """
     M = input_scale * weights_scale / output_scale
-    n = -np.ceil(np.log2(M)).astype(np.int_)
+    n = -np.ceil(np.log2(M)).astype(np.int64)
     for i in range(len(n)):
         if np.allclose(2. ** (-n[i]), M[i]):  # M is a power of 2
             n[i] -= 1
@@ -108,7 +108,7 @@ class QuantizedArray:
         return QuantizedArray(result, scale, zero_point, result_bit_width)
 
     def conv2d(self, weight: 'QuantizedArray', bias: 'QuantizedArray', scale, zero_point, bit_width,
-               M0_repr: np.ndarray[np.int32], n: np.ndarray[np.int_]):
+               M0_repr: np.ndarray[np.int32], n: np.ndarray[np.int64]):
         # input: (C_in, H, W)
         # weight: (C_out, C_in, kH, kW)
         # bias: (C_out)
@@ -174,7 +174,7 @@ class QuantizedArray:
         return output
 
     def linear(self, weight: 'QuantizedArray', bias: 'QuantizedArray', scale, zero_point, bit_width,
-               M0_repr: np.ndarray[np.int32], n: np.ndarray[np.int_]):
+               M0_repr: np.ndarray[np.int32], n: np.ndarray[np.int64]):
         # input: (C_in)
         # weight: (C_out, C_in)
         # bias: (C_out)
