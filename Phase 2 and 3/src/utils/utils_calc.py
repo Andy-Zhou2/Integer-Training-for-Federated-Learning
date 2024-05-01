@@ -1,4 +1,5 @@
 import numpy as np
+import logging
 
 
 def truncate_divide(a, b):
@@ -10,4 +11,8 @@ def truncate_divide(a, b):
     which cause non-deterministic behavior for parallel processing.
     Hence, we use a // b if a * b > 0 else (a + (-a % b)) // b.
     """
-    return np.where(a * b > 0, a // b, (a + (-a % b)) // b)
+    product = a * b
+    expected_sign = np.sign(a) * np.sign(b)
+    if np.any(expected_sign != np.sign(product)):
+        logging.warning(f"Sign mismatch in truncate_divide: a={a}, b={b}, a*b={product}")
+    return np.where(product > 0, a // b, (a + (-a % b)) // b)
