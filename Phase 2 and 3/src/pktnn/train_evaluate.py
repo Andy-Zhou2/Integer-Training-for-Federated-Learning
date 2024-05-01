@@ -45,7 +45,7 @@ def pktnn_train(net: PktNet, data: Dict[str, Tuple[np.ndarray, np.ndarray]], con
     EPOCH = config['epochs']
     BATCH_SIZE = config['batch_size']  # too big could cause overflow
 
-    lr_inv = np.int64(config['initial_lr_inv'])
+    lr_inv = np.int32(config['initial_lr_inv'])
 
     indices = np.arange(num_train_samples)
 

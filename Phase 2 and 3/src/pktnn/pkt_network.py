@@ -15,7 +15,7 @@ class PktNet:
         pass
 
     @abstractmethod
-    def backward(self, loss_delta_mat: PktMat, lr_inv: np.int64):
+    def backward(self, loss_delta_mat: PktMat, lr_inv: np.int32):
         pass
 
     @abstractmethod
@@ -77,7 +77,7 @@ class LinearNet(PktNet):
         self.fc_list[0].forward(x)
         return self.fc_list[-1].output
 
-    def backward(self, loss_delta_mat: PktMat, lr_inv: np.int64):
+    def backward(self, loss_delta_mat: PktMat, lr_inv: np.int32):
         self.fc_list[-1].backward(loss_delta_mat, lr_inv)
 
     def save(self, filename: str):
