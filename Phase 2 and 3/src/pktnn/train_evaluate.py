@@ -56,9 +56,11 @@ def pktnn_train(net: PktNet, data: Dict[str, Tuple[np.ndarray, np.ndarray]], con
         if config['shuffle_dataset_every_epoch']:
             np.random.shuffle(indices)
 
-        if epoch % 10 == 0 and lr_inv < 2 * lr_inv:
-            # avoid overflow
-            lr_inv *= 2
+        if epoch % 10 == 0:
+            if lr_inv < np.int32(2 * lr_inv):
+                # avoid overflow
+                # some systems inexplicitly cast np.int32 to np.int64 when x2
+                lr_inv = np.int32(2 * lr_inv)
 
         sum_loss = 0
         epoch_num_correct = 0
