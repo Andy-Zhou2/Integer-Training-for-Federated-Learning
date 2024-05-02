@@ -2,57 +2,44 @@ import wandb
 import pprint
 
 sweep_config = {
-    'method': 'random',
+    'method': 'grid',
     'metric': {
-        'name': 'max_acc',
+        'name': 'mean_max_acc',
         'goal': 'maximize'
     },
 }
 
 parameters_dict = {
-    'initial_lr_inv': {
-        'distribution': 'int_uniform',
-        'min': 100,
-        'max': 3000
+    'gamma_step': {
+        'values': [1, 2, 3, 4, 5, 8, 10, 15, 20, 25, 30, 50, 100, 150, 200, 300, 500]
     },
-    'batch_size': {
-        'distribution': 'int_uniform',
-        'min': 2,
-        'max': 40
+    'gamma_inv': {
+        'values': [1, 1.001, 1.1, 1.2, 1.5, 2, 2.5, 3.3, 5, 8, 10, 20, 50, 100]
     },
-    'layer_1_bw': {  # using mnist_default
-        'distribution': 'int_uniform',
-        'min': 2,
-        'max': 16
-    },
-    'layer_2_bw': {
-        'distribution': 'int_uniform',
-        'min': 2,
-        'max': 16
-    },
-    'layer_3_bw': {
-        'distribution': 'int_uniform',
-        'min': 1,
-        'max': 16
-    },
-    'label_target_value': {
-        'values': [1, 3, 7, 15, 31, 63, 127, 255]
-    }
 }
 
 # also set fixed parameters
 parameters_dict.update({
+    'model_name': {
+        'value': 'mnist_default'
+    },
+    'label_target_value': {
+        'value': 15
+    },
+    'initial_lr_inv': {
+        'value': 1000
+    },
+    'batch_size': {
+        'value': 20
+    },
     'shuffle_dataset_every_epoch': {
         'value': True
     },
     'dataset': {
-        'value': 'fashion_mnist'
+        'value': 'mnist'
     },
     'test_every_epoch': {
         'value': True
-    },
-    'seed': {
-        'value': 123
     },
     'verbose': {
         'value': True
@@ -61,6 +48,9 @@ parameters_dict.update({
         'value': 50
     },
     'print_hash_every_epoch': {
+        'value': False
+    },
+    'initial_test': {
         'value': False
     },
 })
