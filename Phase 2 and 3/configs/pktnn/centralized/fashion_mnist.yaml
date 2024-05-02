@@ -11,3 +11,5 @@ seed: 123
 label_target_value: 15
 model_name: fashion_mnist_default
 initial_test: false
+gamma_inv: 2
+gamma_step: 10

@@ -11,3 +11,5 @@ seed: 123
 label_target_value: 15
 model_name: mnist_default #[31,40000,40000]
 initial_test: false
+gamma_inv: 2
+gamma_step: 10
