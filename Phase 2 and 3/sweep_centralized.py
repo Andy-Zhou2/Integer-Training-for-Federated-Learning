@@ -33,7 +33,7 @@ def agent_sweep():
         for seed in [1, 2, 3, 4, 5]:
             set_seed(seed)
 
-            config = {
+            train_config = {
                 'epochs': config.epochs,
                 'batch_size': config.batch_size,
                 'initial_lr_inv': config.initial_lr_inv,
@@ -51,11 +51,11 @@ def agent_sweep():
                 'train': train_data,
                 'test': test_data
             }
-            result = pktnn_train(net, pkt_data, config)
+            result = pktnn_train(net, pkt_data, train_config)
             logging.info(f'Train completed. Result: ')
             logging.info(result)
 
-            for epoch in range(config['epochs']):
+            for epoch in range(train_config['epochs']):
                 report = {
                     f'loss_{seed}': result['loss'][epoch],
                     f'train_accuracy_{seed}': result['train_accuracy'][epoch],
@@ -75,5 +75,5 @@ def agent_sweep():
 
 
 if __name__ == '__main__':
-    wandb.agent(sweep_id='kiv2t51l', function=agent_sweep,
+    wandb.agent(sweep_id='i5imkhh2', function=agent_sweep,
                 project='part ii diss', entity='wz337', count=100)
