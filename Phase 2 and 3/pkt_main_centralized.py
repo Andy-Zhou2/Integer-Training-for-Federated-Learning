@@ -50,6 +50,8 @@ def main(config: DictConfig):
         'shuffle_dataset_every_epoch': config.shuffle_dataset_every_epoch,
         'verbose': config.verbose,
         'label_target_value': config.label_target_value,
+        'gamma_inv': config.gamma_inv,
+        'gamma_step': config.gamma_step,
     }
 
     pkt_data = {

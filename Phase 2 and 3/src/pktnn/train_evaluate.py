@@ -46,7 +46,8 @@ def pktnn_train(net: PktNet, data: Dict[str, Tuple[np.ndarray, np.ndarray]], con
     BATCH_SIZE = config['batch_size']  # too big could cause overflow
 
     lr_inv = np.int32(config['initial_lr_inv'])
-
+    gamma_step = config['gamma_step']
+    gamma_inv = config['gamma_inv']
     indices = np.arange(num_train_samples)
 
     for epoch in range(1, EPOCH + 1):
@@ -56,11 +57,11 @@ def pktnn_train(net: PktNet, data: Dict[str, Tuple[np.ndarray, np.ndarray]], con
         if config['shuffle_dataset_every_epoch']:
             np.random.shuffle(indices)
 
-        if epoch % 10 == 0:
-            if lr_inv < np.int32(2 * lr_inv):
+        if epoch % gamma_step == 0:
+            if lr_inv < np.int32(gamma_inv * lr_inv):
                 # avoid overflow
                 # some systems inexplicitly cast np.int32 to np.int64 when x2
-                lr_inv = np.int32(2 * lr_inv)
+                lr_inv = np.int32(gamma_inv * lr_inv)
 
         sum_loss = 0
         epoch_num_correct = 0

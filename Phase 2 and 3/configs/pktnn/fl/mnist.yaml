@@ -18,3 +18,5 @@ model_name: mnist_default
 use_wandb: false
 train_verbose: false
 label_target_value: 15
+gamma_inv: 2
+gamma_step: 10
