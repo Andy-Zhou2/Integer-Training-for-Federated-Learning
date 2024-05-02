@@ -45,7 +45,7 @@ parameters_dict.update({
         'value': True
     },
     'epochs': {
-        'value': 50
+        'value': 1000
     },
     'print_hash_every_epoch': {
         'value': False
