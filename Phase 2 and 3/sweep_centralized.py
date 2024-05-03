@@ -75,5 +75,5 @@ def agent_sweep():
 
 
 if __name__ == '__main__':
-    wandb.agent(sweep_id='mepm5s3t', function=agent_sweep,
+    wandb.agent(sweep_id='2d04jvlx', function=agent_sweep,
                 project='part ii diss', entity='wz337', count=100)
