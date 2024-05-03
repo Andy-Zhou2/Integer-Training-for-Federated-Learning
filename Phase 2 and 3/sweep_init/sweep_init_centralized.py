@@ -11,10 +11,10 @@ sweep_config = {
 
 parameters_dict = {
     'gamma_step': {
-        'values': [1, 2, 3, 4, 5, 8, 10, 15, 20, 25, 30, 50, 100, 150, 200, 300, 500]
+        'values': [1, 2, 3, 4, 5, 8, 10, 15, 20, 25, 30, 50]
     },
     'gamma_inv': {
-        'values': [1, 1.001, 1.1, 1.2, 1.5, 2, 2.5, 3.3, 5, 8, 10, 20, 50, 100]
+        'values': [1.001, 1.1, 1.2, 1.5, 2, 2.5, 3.3, 5, 8, 10, 20, 50, 100]
     },
 }
 
@@ -45,7 +45,7 @@ parameters_dict.update({
         'value': True
     },
     'epochs': {
-        'value': 1000
+        'value': 100
     },
     'print_hash_every_epoch': {
         'value': False

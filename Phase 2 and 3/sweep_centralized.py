@@ -30,7 +30,7 @@ def agent_sweep():
 
         max_accs = []
 
-        for seed in [1, 2, 3, 4, 5]:
+        for seed in [1]: # , 2, 3, 4, 5]:
             set_seed(seed)
 
             train_config = {
@@ -75,5 +75,5 @@ def agent_sweep():
 
 
 if __name__ == '__main__':
-    wandb.agent(sweep_id='i5imkhh2', function=agent_sweep,
+    wandb.agent(sweep_id='mepm5s3t', function=agent_sweep,
                 project='part ii diss', entity='wz337', count=100)
