@@ -20,7 +20,7 @@ def agent_sweep():
 
         model_name = config.model_name
 
-        custom_name = f'step_{config.gamma_step}_inv_{config.initial_lr_inv}'
+        custom_name = f'step_{config.gamma_step}_inv_{config.gamma_inv}'
         wandb.run.name = custom_name
 
         weight_folder = ''  # don't save for sweep
