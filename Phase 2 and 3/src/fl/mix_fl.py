@@ -84,7 +84,9 @@ def simulate(config):
         'print_hash_every_epoch': False,
         'shuffle_dataset_every_epoch': config.shuffle_dataset_every_epoch,
         'verbose': config.train_verbose,
-        'label_target_value': config.label_target_value
+        'label_target_value': config.label_target_value,
+        'gamma_inv': config.gamma_inv,
+        'gamma_step': config.gamma_step,
     }
     train_ratio = config.train_ratio  # proportion of the training set used for training (the rest for validation)
     model_name = config.model_name  # model name to be used, such as mnist_default or custom [100, 100]

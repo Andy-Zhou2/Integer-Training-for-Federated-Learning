@@ -27,3 +27,5 @@ fp_weight_independence: false
 pkt_weight_independence: false
 fp_params_weight: 1
 pkt_params_weight: 1
+gamma_inv: 2
+gamma_step: 10
