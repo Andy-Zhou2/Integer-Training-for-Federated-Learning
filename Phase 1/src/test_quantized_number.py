@@ -7,12 +7,12 @@ import torch
 class TestQuantizedArrayCreation(unittest.TestCase):
 
     def test_creation_per_tensor(self):
-        qa = QuantizedArray.quantize_per_tensor([1, 2, 3], scale=2 ** -10, zero_point=0, bit_width=64)
+        qa = QuantizedArray.quantize_per_tensor([1, 2, 3], scale=2 ** -10, zero_point=0, bit_width=32)
         self.assertTrue(np.array_equal(qa.array, np.array([1, 2, 3]) * 2 ** 10))
 
     def test_creation_per_channel(self):
         qa = QuantizedArray.quantize_per_channel(np.array([1., 2.]), scale=np.array([1e-2, 1e-1]),
-                                                 zero_point=np.array([0, 1]), bit_width=64)
+                                                 zero_point=np.array([0, 1]), bit_width=32)
         self.assertTrue(np.array_equal(qa.array, np.array([100, 21])))
 
     def test_bit_width_acc_loss(self):
@@ -32,22 +32,22 @@ class TestQuantizedArrayCreation(unittest.TestCase):
 
     def test_dequantize_per_tensor(self):
         arr = [1, 2, 3]
-        qa = QuantizedArray.quantize_per_tensor(arr, scale=2 ** -10, zero_point=0, bit_width=64)
+        qa = QuantizedArray.quantize_per_tensor(arr, scale=2 ** -10, zero_point=0, bit_width=32)
         self.assertTrue(np.allclose(qa.dequantize(), arr))
 
         arr = [1, 5, 9, 5]
-        qa = QuantizedArray.quantize_per_tensor(arr, scale=2 ** -10, zero_point=0, bit_width=64)
+        qa = QuantizedArray.quantize_per_tensor(arr, scale=2 ** -10, zero_point=0, bit_width=32)
         self.assertTrue(np.allclose(qa.dequantize(), arr))
 
         arr = [-2, -5, -7, 10]
-        qa = QuantizedArray.quantize_per_tensor(arr, scale=2 ** -10, zero_point=2 ** 30, bit_width=64)
+        qa = QuantizedArray.quantize_per_tensor(arr, scale=2 ** -10, zero_point=2 ** 30, bit_width=32)
         self.assertTrue(np.allclose(qa.dequantize(), arr))
 
     def test_dequantize_per_channel(self):
         arr = np.array([1., 2.])
         qa = QuantizedArray.quantize_per_channel(arr,
                                                  scale=np.array([1e-2, 1e-1]),
-                                                 zero_point=np.array([0, 1]), bit_width=64)
+                                                 zero_point=np.array([0, 1]), bit_width=32)
         self.assertTrue(np.allclose(qa.dequantize(), arr))
 
         arr = np.array([[[[0, 1], [1, 0]]], [[[0, 1], [1, 0]]]])
@@ -59,9 +59,9 @@ class TestQuantizedArrayCreation(unittest.TestCase):
     def test_add(self):
         arr1 = np.array([1, 2, 3])
         arr2 = np.array([3, 4, 5])
-        a = QuantizedArray.quantize_per_tensor(arr1, scale=2 ** -10, zero_point=2 ** 30, bit_width=64)
-        b = QuantizedArray.quantize_per_tensor(arr2, scale=2 ** -10, zero_point=2 ** 30, bit_width=64)
-        c = a.add(b, scale=2 ** -10, zero_point=2 ** 30, bit_width=64)
+        a = QuantizedArray.quantize_per_tensor(arr1, scale=2 ** -10, zero_point=2 ** 30, bit_width=32)
+        b = QuantizedArray.quantize_per_tensor(arr2, scale=2 ** -10, zero_point=2 ** 30, bit_width=32)
+        c = a.add(b, scale=2 ** -10, zero_point=2 ** 30, bit_width=32)
         self.assertTrue(np.allclose(c.dequantize(), arr1 + arr2))
 
 
@@ -73,7 +73,7 @@ class TestQuantizedArrayMatMul(unittest.TestCase):
         arr2 = np.array([[5, 6], [7, 8]])
         scale = 2 ** -10
         zero_point = 0
-        bit_width = 64
+        bit_width = 32
 
         qa1 = QuantizedArray.quantize_per_tensor(arr1, scale, zero_point, bit_width)
         qa2 = QuantizedArray.quantize_per_tensor(arr2, scale, zero_point, bit_width)
@@ -89,7 +89,7 @@ class TestQuantizedArrayMatMul(unittest.TestCase):
         identity = np.array([[1, 0], [0, 1]])
         scale = 2 ** -10
         zero_point = 0
-        bit_width = 64
+        bit_width = 32
 
         qa = QuantizedArray.quantize_per_tensor(arr, scale, zero_point, bit_width)
         qa_identity = QuantizedArray.quantize_per_tensor(identity, scale, zero_point, bit_width)
@@ -104,7 +104,7 @@ class TestQuantizedArrayMatMul(unittest.TestCase):
         zero_matrix = np.array([[0, 0], [0, 0]])
         scale = 2 ** -10
         zero_point = 0
-        bit_width = 64
+        bit_width = 32
 
         qa = QuantizedArray.quantize_per_tensor(arr, scale, zero_point, bit_width)
         qa_zero = QuantizedArray.quantize_per_tensor(zero_matrix, scale, zero_point, bit_width)
@@ -119,7 +119,7 @@ class TestQuantizedArrayMatMul(unittest.TestCase):
         arr2 = np.array([[5, 6], [7, 8]])
         scale = 2 ** -10
         zero_point = 0
-        bit_width_1 = 64
+        bit_width_1 = 32
         bit_width_2 = 32
 
         qa1 = QuantizedArray.quantize_per_tensor(arr1, scale, zero_point, bit_width_1)
