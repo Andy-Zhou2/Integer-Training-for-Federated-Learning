@@ -105,7 +105,7 @@ def simulate(config):
     client_datasets_pkt, test_dataset_pkt = load_federated_dataset_pkt(dataset_name, dataset_dirichlet_alpha,
                                                                        num_clients, train_ratio)
 
-    client_manager = DeterministicClientManager(client_cid_rng, enable_resampling=False)
+    client_manager = DeterministicClientManager(client_cid_rng, enable_resampling=False, fp_threshold_cid=fp_threshold_cid, num_clients=num_clients)
 
     # get initial parameters, ensuring correct layout
     init_net_fp = fp_get_net(model_name)

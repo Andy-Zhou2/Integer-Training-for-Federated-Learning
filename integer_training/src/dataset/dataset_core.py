@@ -67,8 +67,9 @@ def load_federated_dataset(dataset_name: str, dirichlet_alpha: Union[int, float]
 
     if dataset_name == 'mnist':
         each_client_data = 60_000 // num_clients
+        distribution = 40 * [300] + 800 * [60]
         partitioner = InnerDirichletPartitioner(
-            partition_sizes=[each_client_data] * num_clients, partition_by="label", alpha=dirichlet_alpha
+            partition_sizes=distribution, partition_by="label", alpha=dirichlet_alpha
         )
         fds = FederatedDataset(dataset="mnist", partitioners={"train": partitioner})
     elif dataset_name == 'fashion_mnist':

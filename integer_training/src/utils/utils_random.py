@@ -27,6 +27,8 @@ class DeterministicClientManager(SimpleClientManager):
             self,
             client_cid_generator: random.Random,
             enable_resampling: bool = False,
+            num_clients: int = 0,
+            fp_threshold_cid: int = 0,
     ) -> None:
         """Initialize DeterministicClientManager.
 
@@ -45,6 +47,11 @@ class DeterministicClientManager(SimpleClientManager):
 
         self.client_cid_generator = client_cid_generator
         self.enable_resampling = enable_resampling
+        self.num_clients = num_clients
+        self.fp_threshold_cid = fp_threshold_cid
+        if num_clients != 0 or fp_threshold_cid != 0:
+            assert fp_threshold_cid >= 3, "Number of FP clients must be at least 3."
+            assert num_clients - fp_threshold_cid - 1 >= 3, "Number of PKT clients must be at least 3."
 
     def sample(
             self,
@@ -102,6 +109,24 @@ class DeterministicClientManager(SimpleClientManager):
                 num_clients,
             )
             available_cids = []
+
+        # ensure at least 3 clients on each side
+        if self.num_clients != 0:
+            fp_client_num = len([cid for cid in available_cids if int(cid) <= self.fp_threshold_cid])
+            pkt_client_num = len(available_cids) - fp_client_num
+            log(logging.INFO, f'initial client num: {len(available_cids)}, fp client num: {fp_client_num}, pkt client num: {pkt_client_num}')
+            if fp_client_num < 3:
+                for cid in range(3):
+                    if str(cid) not in available_cids:
+                        available_cids.append(str(cid))
+            if pkt_client_num < 3:
+                for cid in range(self.fp_threshold_cid + 1, self.fp_threshold_cid + 1 + 3):
+                    if str(cid) not in available_cids:
+                        available_cids.append(str(cid))
+
+            fp_client_num = len([cid for cid in available_cids if int(cid) <= self.fp_threshold_cid])
+            pkt_client_num = len(available_cids) - fp_client_num
+            log(logging.INFO, f'final client num: {len(available_cids)}, fp client num: {fp_client_num}, pkt client num: {pkt_client_num}')
 
         client_list = [self.clients[cid] for cid in available_cids]
         log(
