@@ -4,6 +4,22 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+class MnistLinearNet(nn.Module):
+    def __init__(self):
+        super(MnistLinearNet, self).__init__()
+        self.fc1 = nn.Linear(28 * 28, 100)
+        self.fc2 = nn.Linear(100, 50)
+        self.fc3 = nn.Linear(50, 10)
+
+    def forward(self, x):
+        x = torch.flatten(x, 1)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        x = F.log_softmax(x)
+
+        return x
+
 class MnistNet(nn.Module):
     def __init__(self, channel1, channel2):
         super(MnistNet, self).__init__()

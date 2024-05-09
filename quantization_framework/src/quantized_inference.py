@@ -8,7 +8,7 @@ import copy
 channel1 = 2
 channel2 = 4
 
-model_ckpt = torch.load(f'../model_ckpt/mnist_{channel1}_{channel2}.pt', map_location=torch.device('cpu'))
+model_ckpt = torch.load(f'../model_ckpt/mnist_linear.pt', map_location=torch.device('cpu'))
 
 transform = transforms.Compose([
     transforms.ToTensor(),
@@ -77,51 +77,7 @@ def infer(data, bit_width_config, min_max_config):
                                                             bit_width=input_bit_width)
     data = QuantizedArray.quantize_per_tensor(data, input_scale, input_zero_point, input_bit_width)
 
-    conv1_weight = model_ckpt['conv1.weight']
-    conv1_weight_bit_width = bit_width_config['conv1_weight']
-    conv1_weight_scale, conv1_weight_zero_point = get_per_channel_q_params(conv1_weight, conv1_weight_bit_width)
-    conv1_weight = QuantizedArray.quantize_per_channel(conv1_weight, conv1_weight_scale, conv1_weight_zero_point,
-                                                       conv1_weight_bit_width)
-
-    conv1_bias = model_ckpt['conv1.bias']
-    conv1_bias_bit_width = bit_width_config['conv1_bias']
-    conv1_bias_scale = input_scale * conv1_weight_scale
-    conv1_bias_zero_point = np.zeros(conv1_bias.shape, dtype=np.int64)
-    conv1_bias = QuantizedArray.quantize_per_channel(conv1_bias, conv1_bias_scale, conv1_bias_zero_point,
-                                                     conv1_bias_bit_width)
-
-    act1_bit_width = bit_width_config['act1']
-    act1_scale, act1_zero_point = get_q_params_from_range(min_value=0,  # simulate relu
-                                                          max_value=min_max_config['conv1'][1],
-                                                          bit_width=act1_bit_width)
-    act1_M0repr, act1_n = compute_M0repr_and_n(input_scale, conv1_weight_scale, act1_scale)
-
-    act1 = data.conv2d(conv1_weight, conv1_bias, act1_scale, act1_zero_point, act1_bit_width, act1_M0repr, act1_n)
-
-    conv2_weight = model_ckpt['conv2.weight']
-    conv2_weight_bit_width = bit_width_config['conv2_weight']
-    conv2_weight_scale, conv2_weight_zero_point = get_per_channel_q_params(conv2_weight, conv2_weight_bit_width)
-    conv2_weight = QuantizedArray.quantize_per_channel(conv2_weight, conv2_weight_scale, conv2_weight_zero_point,
-                                                       conv2_weight_bit_width)
-
-    conv2_bias = model_ckpt['conv2.bias']
-    conv2_bias_bit_width = bit_width_config['conv2_bias']
-    conv2_bias_scale = act1_scale * conv2_weight_scale
-    conv2_bias_zero_point = np.zeros(conv2_bias.shape, dtype=np.int64)
-    conv2_bias = QuantizedArray.quantize_per_channel(conv2_bias, conv2_bias_scale, conv2_bias_zero_point,
-                                                     conv2_bias_bit_width)
-
-    act2_bit_width = bit_width_config['act2']
-    act2_scale, act2_zero_point = get_q_params_from_range(min_value=0,  # simulate relu
-                                                          max_value=min_max_config['conv2'][1],
-                                                          bit_width=act2_bit_width)
-    act2_M0repr, act2_n = compute_M0repr_and_n(act1_scale, conv2_weight_scale, act2_scale)
-
-    act2 = act1.conv2d(conv2_weight, conv2_bias, act2_scale, act2_zero_point, act2_bit_width, act2_M0repr, act2_n)
-
-    pooled_act2 = act2.maxpool2d(2)
-
-    act2_flattened = pooled_act2.flatten()
+    act2_flattened = data.flatten()
 
     fc1_weight = model_ckpt['fc1.weight']
     fc1_weight_bit_width = bit_width_config['fc1_weight']
@@ -158,32 +114,51 @@ def infer(data, bit_width_config, min_max_config):
                                                    fc2_bias_bit_width)
 
     act4_bit_width = bit_width_config['act4']
-    act4_scale, act4_zero_point = get_q_params_from_range(min_value=min_max_config['fc2'][0],  # no relu
+    act4_scale, act4_zero_point = get_q_params_from_range(min_value=0,  # relu
                                                           max_value=min_max_config['fc2'][1],
                                                           bit_width=act4_bit_width)
     act4_M0repr, act4_n = compute_M0repr_and_n(act3.scale, fc2_weight_scale, act4_scale)
 
     act4 = act3.linear(fc2_weight, fc2_bias, act4_scale, act4_zero_point, act4_bit_width, act4_M0repr, act4_n)
-    return act4
+
+    fc3_weight = model_ckpt['fc3.weight']
+    fc3_weight_bit_width = bit_width_config['fc3_weight']
+    fc3_weight_scale, fc3_weight_zero_point = get_per_channel_q_params(fc3_weight, fc3_weight_bit_width)
+    fc3_weight = QuantizedArray.quantize_per_channel(fc3_weight, fc3_weight_scale, fc3_weight_zero_point,
+                                                     fc3_weight_bit_width)
+
+    fc3_bias = model_ckpt['fc3.bias']
+    fc3_bias_bit_width = bit_width_config['fc3_bias']
+    fc3_bias_scale = act4.scale * fc3_weight_scale
+    fc3_bias_zero_point = np.zeros(fc3_bias.shape, dtype=np.int64)
+    fc3_bias = QuantizedArray.quantize_per_channel(fc3_bias, fc3_bias_scale, fc3_bias_zero_point,
+                                                   fc3_bias_bit_width)
+
+    act5_bit_width = bit_width_config['act4']
+    act5_scale, act5_zero_point = get_q_params_from_range(min_value=min_max_config['fc3'][0],  # no relu
+                                                          max_value=min_max_config['fc3'][1],
+                                                          bit_width=act5_bit_width)
+    act5_M0repr, act5_n = compute_M0repr_and_n(act3.scale, fc3_weight_scale, act5_scale)
+
+    act5 = act4.linear(fc3_weight, fc3_bias, act5_scale, act5_zero_point, act5_bit_width, act5_M0repr, act5_n)
+    return act5
 
 
 if __name__ == '__main__':
     bit_width_config_copy = {
         'input': 8,
-        'conv1_weight': 8,
-        'conv1_bias': 32,
-        'act1': 8,
-        'conv2_weight': 8,
-        'conv2_bias': 32,
-        'act2': 8,
         'fc1_weight': 8,
         'fc1_bias': 32,
         'act3': 8,
         'fc2_weight': 8,
         'fc2_bias': 32,
         'act4': 8,
+        'fc3_weight': 8,
+        'fc3_bias': 32,
+        'act5': 8,
     }
-    min_max_config = get_statistics(channel1=channel1, channel2=channel2)
+    min_max_config = get_statistics()
+    print('bit_width_config_copy', bit_width_config_copy)
     print('min_max_config', min_max_config)
 
     # for bw in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 16, 20, 24, 28, 32]:
@@ -191,54 +166,55 @@ if __name__ == '__main__':
     #         if 'bias' not in key:
     #             bit_width_config[key] = bw
 
-    for layer in ['conv1_weight', 'conv2_weight', 'fc1_weight', 'fc2_weight']:
-        for bw in [4, 2, 1]:
-            bit_width_config = copy.deepcopy(bit_width_config_copy)
-            bit_width_config[layer] = bw
+    # for layer in ['conv1_weight', 'conv2_weight', 'fc1_weight', 'fc2_weight']:
+    #     for bw in [4, 2, 1]:
+    #         bit_width_config = copy.deepcopy(bit_width_config_copy)
+    #         bit_width_config[layer] = bw
 
-            print('bit_width_config', bit_width_config)
+    # print('bit_width_config', bit_width_config)
+    bit_width_config = bit_width_config_copy
 
-            correct_test_top1 = 0
-            correct_test_top2 = 0
-            correct_test_top3 = 0
-            total_test = 0
+    correct_test_top1 = 0
+    correct_test_top2 = 0
+    correct_test_top3 = 0
+    total_test = 0
 
-            for i, (data, answer) in enumerate(dataset_test):
-                output = infer(data, bit_width_config, min_max_config).array
-                sorted_indices = np.argsort(output)[::-1]  # Sort indices of output in descending order of confidence
+    for i, (data, answer) in enumerate(dataset_test):
+        output = infer(data, bit_width_config, min_max_config).array
+        sorted_indices = np.argsort(output)[::-1]  # Sort indices of output in descending order of confidence
 
-                # Get top-1, top-2, and top-3 predictions
-                top1_prediction = sorted_indices[0]
-                top2_predictions = sorted_indices[:2]
-                top3_predictions = sorted_indices[:3]
+        # Get top-1, top-2, and top-3 predictions
+        top1_prediction = sorted_indices[0]
+        top2_predictions = sorted_indices[:2]
+        top3_predictions = sorted_indices[:3]
 
-                # Increment correct counters as appropriate
-                if top1_prediction == answer:
-                    correct_test_top1 += 1
-                if answer in top2_predictions:
-                    correct_test_top2 += 1
-                if answer in top3_predictions:
-                    correct_test_top3 += 1
+        # Increment correct counters as appropriate
+        if top1_prediction == answer:
+            correct_test_top1 += 1
+        if answer in top2_predictions:
+            correct_test_top2 += 1
+        if answer in top3_predictions:
+            correct_test_top3 += 1
 
-                # Optional: Print predictions for the first 10 instances or if the model is incorrect
-                if top1_prediction != answer or i < 10:
-                    print(f'Prediction at index {i}, answer: {answer}, prediction: {top1_prediction}, output: {output}')
+        # Optional: Print predictions for the first 10 instances or if the model is incorrect
+        if top1_prediction != answer or i < 10:
+            print(f'Prediction at index {i}, answer: {answer}, prediction: {top1_prediction}, output: {output}')
 
-                total_test += 1
+        total_test += 1
 
-                # Print accuracies every 100 samples
-                if total_test % 100 == 0:
-                    accuracy_top1 = correct_test_top1 / total_test * 100
-                    accuracy_top2 = correct_test_top2 / total_test * 100
-                    accuracy_top3 = correct_test_top3 / total_test * 100
-                    print(
-                        f'Accuracy Top-1: {accuracy_top1:.2f}%, Top-2: {accuracy_top2:.2f}%, Top-3: {accuracy_top3:.2f}%')
-                    print(
-                        f'Correct Top-1: {correct_test_top1}, Top-2: {correct_test_top2}, Top-3: {correct_test_top3}, '
-                        f'Total: {total_test}')
+        # Print accuracies every 100 samples
+        if total_test % 100 == 0:
             accuracy_top1 = correct_test_top1 / total_test * 100
             accuracy_top2 = correct_test_top2 / total_test * 100
             accuracy_top3 = correct_test_top3 / total_test * 100
+            print(
+                f'Accuracy Top-1: {accuracy_top1:.2f}%, Top-2: {accuracy_top2:.2f}%, Top-3: {accuracy_top3:.2f}%')
+            print(
+                f'Correct Top-1: {correct_test_top1}, Top-2: {correct_test_top2}, Top-3: {correct_test_top3}, '
+                f'Total: {total_test}')
+    accuracy_top1 = correct_test_top1 / total_test * 100
+    accuracy_top2 = correct_test_top2 / total_test * 100
+    accuracy_top3 = correct_test_top3 / total_test * 100
 
-            with open('mnist_accuracy.txt', 'a') as f:
-                f.write(f'{layer} {bw}\t{accuracy_top1}\t{accuracy_top2}\t{accuracy_top3}\n')
+    with open('mnist_accuracy.txt', 'a') as f:
+        f.write(f'{bit_width_config}\t{accuracy_top1}\t{accuracy_top2}\t{accuracy_top3}\n')
