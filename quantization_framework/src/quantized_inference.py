@@ -4,6 +4,8 @@ from torchvision import datasets, transforms
 from quantize.quantized_number import QuantizedArray, compute_M0repr_and_n
 from collect_statistics import get_statistics
 import copy
+import hydra
+from omegaconf import DictConfig
 
 channel1 = 2
 channel2 = 4
@@ -134,29 +136,21 @@ def infer(data, bit_width_config, min_max_config):
     fc3_bias = QuantizedArray.quantize_per_channel(fc3_bias, fc3_bias_scale, fc3_bias_zero_point,
                                                    fc3_bias_bit_width)
 
-    act5_bit_width = bit_width_config['act4']
+    act5_bit_width = bit_width_config['act5']
     act5_scale, act5_zero_point = get_q_params_from_range(min_value=min_max_config['fc3'][0],  # no relu
                                                           max_value=min_max_config['fc3'][1],
                                                           bit_width=act5_bit_width)
-    act5_M0repr, act5_n = compute_M0repr_and_n(act3.scale, fc3_weight_scale, act5_scale)
+    act5_M0repr, act5_n = compute_M0repr_and_n(act4.scale, fc3_weight_scale, act5_scale)
 
     act5 = act4.linear(fc3_weight, fc3_bias, act5_scale, act5_zero_point, act5_bit_width, act5_M0repr, act5_n)
     return act5
 
 
-if __name__ == '__main__':
-    bit_width_config_copy = {
-        'input': 8,
-        'fc1_weight': 8,
-        'fc1_bias': 32,
-        'act3': 8,
-        'fc2_weight': 8,
-        'fc2_bias': 32,
-        'act4': 8,
-        'fc3_weight': 8,
-        'fc3_bias': 32,
-        'act5': 8,
-    }
+@hydra.main(config_path='config', config_name='bw', version_base='1.2')
+def main(cfg: DictConfig):
+    print('Configuration:', cfg)
+
+    bit_width_config_copy = cfg
     min_max_config = get_statistics()
     print('bit_width_config_copy', bit_width_config_copy)
     print('min_max_config', min_max_config)
@@ -218,3 +212,6 @@ if __name__ == '__main__':
 
     with open('mnist_accuracy.txt', 'a') as f:
         f.write(f'{bit_width_config}\t{accuracy_top1}\t{accuracy_top2}\t{accuracy_top3}\n')
+
+if __name__ == '__main__':
+    main()
