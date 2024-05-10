@@ -1,10 +1,10 @@
 import torch
 import torch.nn as nn
 from torchvision import datasets, transforms
-from model import MnistNet, MnistLinearNet
+from model import MnistNet
 
 
-def get_statistics(pass_quantity=150):
+def get_statistics(channel1=2, channel2=4, pass_quantity=150):
     """
     Get runtime statistics of the model. This is used to calibrate the quantization process.
     Requires model placed under specific directory with naming convention that agrees with the model training code.
@@ -22,17 +22,17 @@ def get_statistics(pass_quantity=150):
     dataset_train = datasets.MNIST('../data', train=True,
                              transform=transform, download=True)
 
-    model = MnistLinearNet()
-    model.load_state_dict(torch.load(f"../model_ckpt/mnist_linear.pt", map_location='cpu'))
+    model = MnistNet(channel1, channel2)
+    model.load_state_dict(torch.load(f"../model_ckpt/mnist_{channel1}_{channel2}.pt", map_location='cpu'))
 
     model.eval()
 
     """Fuse
     - Inplace fusion replaces the first module in the sequence with the fused module, and the rest with identity modules
     """
-    # torch.quantization.fuse_modules(model, ['conv1', 'relu1'], inplace=True)  # fuse first Conv-ReLU pair
-    # torch.quantization.fuse_modules(model, ['conv2', 'relu2'], inplace=True)  # fuse second Conv-ReLU pair
-    # torch.quantization.fuse_modules(model, ['fc1', 'relu3'], inplace=True)
+    torch.quantization.fuse_modules(model, ['conv1', 'relu1'], inplace=True)  # fuse first Conv-ReLU pair
+    torch.quantization.fuse_modules(model, ['conv2', 'relu2'], inplace=True)  # fuse second Conv-ReLU pair
+    torch.quantization.fuse_modules(model, ['fc1', 'relu3'], inplace=True)
 
     """Insert stubs"""
     m = nn.Sequential(torch.quantization.QuantStub(),
@@ -64,16 +64,15 @@ def get_statistics(pass_quantity=150):
 
     observers = dict()
     observers['input'] = m[0].activation_post_process
-    # observers['conv1'] = m[1].conv1.activation_post_process
-    # observers['conv2'] = m[1].conv2.activation_post_process
+    observers['conv1'] = m[1].conv1.activation_post_process
+    observers['conv2'] = m[1].conv2.activation_post_process
     observers['fc1'] = m[1].fc1.activation_post_process
     observers['fc2'] = m[1].fc2.activation_post_process
-    observers['fc3'] = m[1].fc3.activation_post_process
 
     results = {key: (observer.min_val.item(), observer.max_val.item()) for key, observer in observers.items()}
     return results
 
 
 if __name__ == '__main__':
-    r = get_statistics()
+    r = get_statistics(channel1=2, channel2=4)
     print(r)

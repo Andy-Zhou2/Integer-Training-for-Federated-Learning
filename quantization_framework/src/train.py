@@ -6,7 +6,7 @@ import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
 import os
-from model import MnistNet, MnistLinearNet
+from model import MnistNet
 
 
 def train(args, model, device, train_loader, optimizer, epoch):
@@ -108,7 +108,7 @@ def train_model():
 
     ch1 = args.channel1;
     ch2 = args.channel2
-    model = MnistLinearNet().to(device)
+    model = MnistNet(ch1, ch2).to(device)
     optimizer = optim.Adadelta(model.parameters(), lr=args.lr)
 
     scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma)
@@ -118,7 +118,7 @@ def train_model():
         scheduler.step()
 
     os.makedirs("../model_ckpt", exist_ok=True)
-    torch.save(model.state_dict(), f"../model_ckpt/mnist_linear.pt")
+    torch.save(model.state_dict(), f"../model_ckpt/mnist_{ch1}_{ch2}.pt")
 
 
 if __name__ == '__main__':
